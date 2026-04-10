@@ -17,10 +17,48 @@ class Web3Manager {
     this.provider        = null;
     this.signer          = null;
     this.address         = null;
-    this.contract        = null;   // ArcFiLoanManager
-    this.usdcContract    = null;   // USDC ERC-20
+    this.contract        = null;   // ArcFiLoanManager (with signer, after wallet connect)
+    this.usdcContract    = null;   // USDC ERC-20 (with signer)
     this.chainId         = null;
     this.listeners       = {};
+
+    // ── Read-only provider & contract (lazy-init, no wallet required) ────────
+    // Initialised on first call to getReadContract().
+    this._readProvider = null;
+    this._readContract = null;
+  }
+
+  /**
+   * Returns the best available contract instance:
+   *   - Signed contract (after wallet connect) — for write ops
+   *   - Read-only contract (always available)  — for read ops
+   *   - null if nothing is initialised
+   */
+  getReadContract() {
+    // If we already have a signed contract, prefer it
+    if (this.contract) return this.contract;
+
+    // Lazily initialise the read-only contract on first call
+    // (ensures window.LOAN_ABI is available, as contractABI.js may assign it after constructor)
+    if (!this._readContract && window.LOAN_ABI && window.LOAN_ABI.length > 0) {
+      try {
+        if (!this._readProvider) {
+          this._readProvider = new ethers.providers.JsonRpcProvider(
+            'https://rpc.testnet.arc.network',
+            { chainId: 5042002, name: 'arc-testnet' }
+          );
+        }
+        this._readContract = new ethers.Contract(
+          window.CONTRACT_ADDRESS || '0x413508DBCb5Cbf86b93C09b9AE633Af8B14cEF5F',
+          window.LOAN_ABI,
+          this._readProvider
+        );
+      } catch (e) {
+        console.warn('Failed to create read-only contract:', e.message);
+      }
+    }
+
+    return this._readContract || null;
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -70,7 +108,9 @@ class Web3Manager {
     // ── Main lending contract ──────────────────────────────────────────
     const contractAddr = window.CONTRACT_ADDRESS;
     if (contractAddr && contractAddr !== '0x0000000000000000000000000000000000000000') {
-      this.contract = new ethers.Contract(contractAddr, window.LOAN_ABI, this.signer);
+      this.contract  = new ethers.Contract(contractAddr, window.LOAN_ABI, this.signer);
+      // Also update the read contract so getReadContract() returns the signed version
+      this._readContract = this.contract;
     }
 
     // ── USDC ERC-20 ────────────────────────────────────────────────────
@@ -395,6 +435,7 @@ class Web3Manager {
     return this._repayInstallment(loanId, installmentAmount);
   }
 
+  // Also update _repayInstallment to use getReadContract for amount lookup
   async _repayInstallment(loanId, installmentAmount) {
     this.requireConnection();
     this.requireArcNetwork();
@@ -404,8 +445,9 @@ class Web3Manager {
     // Fetch exact remaining amount from contract to avoid rounding errors
     let payAmountBN;
     try {
-      const [remaining] = await this.contract.getRemainingAmount(loanId);
-      const loan        = await this.contract.getLoan(loanId);
+      const c = this.contract; // must use signed contract for accurate state
+      const [remaining] = await c.getRemainingAmount(loanId);
+      const loan        = await c.getLoan(loanId);
       const instLeft    = loan.totalInstallments.sub(loan.installmentsPaid);
 
       // If last installment, use exact remaining; otherwise use installmentAmount
@@ -483,9 +525,10 @@ class Web3Manager {
    * Maps raw contract struct → format expected by the frontend.
    */
   async getLoanFull(loanId) {
-    if (!this.contract) return null;
+    const c = this.getReadContract();
+    if (!c) return null;
     try {
-      const raw = await this.contract.getLoan(loanId);
+      const raw = await c.getLoan(loanId);
       return this._normalizeLoan(raw);
     } catch (e) {
       console.warn('getLoanFull error for', loanId, '—', e.message);
@@ -591,9 +634,10 @@ class Web3Manager {
    * Get all loans for a user (borrower OR lender — contract indexes both).
    */
   async getUserLoans(address) {
-    if (!this.contract) return [];
+    const c = this.getReadContract();
+    if (!c) return [];
     try {
-      const ids   = await this.contract.getUserLoans(address || this.address);
+      const ids   = await c.getUserLoans(address || this.address);
       if (!ids || ids.length === 0) return [];
       const loans = await Promise.all(ids.map(id => this.getLoanFull(id.toString())));
       return loans.filter(Boolean);
@@ -608,9 +652,10 @@ class Web3Manager {
   async getLenderLoans(address)   { return this.getUserLoans(address); }
 
   async getRemainingAmount(loanId) {
-    if (!this.contract) return { remaining: '0', installmentsLeft: 0 };
+    const c = this.getReadContract();
+    if (!c) return { remaining: '0', installmentsLeft: 0 };
     try {
-      const [remaining, left] = await this.contract.getRemainingAmount(loanId);
+      const [remaining, left] = await c.getRemainingAmount(loanId);
       return {
         remaining:        ethers.utils.formatUnits(remaining, 6),
         installmentsLeft: left.toNumber()
@@ -619,9 +664,10 @@ class Web3Manager {
   }
 
   async getTotalLoans() {
-    if (!this.contract) return 0;
+    const c = this.getReadContract();
+    if (!c) return 0;
     try {
-      const n = await this.contract.getTotalLoans();
+      const n = await c.getTotalLoans();
       return n.toNumber();
     } catch { return 0; }
   }
@@ -631,7 +677,8 @@ class Web3Manager {
    * Use `limit` to avoid loading too many at once.
    */
   async getAllLoans(limit = 50) {
-    if (!this.contract) return [];
+    const c = this.getReadContract();
+    if (!c) return [];
     try {
       const total = await this.getTotalLoans();
       const count = Math.min(total, limit);

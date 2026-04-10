@@ -716,69 +716,8 @@ function resetBorrowForm() {
 
 // ══════════════════════════════════════════════════════════════
 // LENDER DASHBOARD
+// (loadLenderLoans, filterLenderLoans, _lendRender defined in marketplace.js)
 // ══════════════════════════════════════════════════════════════
-let allLenderLoans = [];
-
-async function loadLenderLoans() {
-  const tbody = document.getElementById('lender-loans-tbody');
-  if (!window.web3.contract) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">Contract not configured</div><div class="empty-desc">Set contract address in Settings.</div></div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="spinner dark"></div></div></td></tr>`;
-  try {
-    allLenderLoans = await window.web3.getAllLoans();
-    renderLenderTable(allLenderLoans);
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">❌</div><div class="empty-title">Failed to load</div><div class="empty-desc">${err.message}</div></div></td></tr>`;
-  }
-}
-
-function filterLenderLoans(filter, btn) {
-  document.querySelectorAll('#page-lend .tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const filtered = filter === 'all' ? allLenderLoans : allLenderLoans.filter(l => l.statusLabel === filter);
-  renderLenderTable(filtered);
-}
-
-function renderLenderTable(loans) {
-  const tbody = document.getElementById('lender-loans-tbody');
-  if (!loans.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No loans found</div></div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = loans.map(loan => `
-    <tr>
-      <td class="mono font-bold" style="color:var(--cyan);">#${loan.id}</td>
-      <td>
-        <div style="font-weight:600; font-size:13px; color:var(--text-primary);">${loan.borrowerInfo?.fullName || 'N/A'}</div>
-        <div class="mono" style="font-size:10px; color:var(--text-muted);">${loan.borrower.slice(0,8)}…${loan.borrower.slice(-4)}</div>
-      </td>
-      <td class="mono" style="color:var(--cyan); font-weight:700;">$${parseFloat(loan.principalAmount).toFixed(2)}</td>
-      <td>${loan.totalInstallments}</td>
-      <td>${collateralBadge(loan.collateral?.colTypeLabel)}</td>
-      <td>${statusBadge(loan.statusLabel)}</td>
-      <td style="font-size:11px; color:var(--text-muted);">${formatDate(loan.createdAt)}</td>
-      <td>
-        <div class="flex" style="gap:6px; flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})">
-            <i class="fa-solid fa-eye"></i>
-          </button>
-          ${loan.statusLabel === 'Requested' ? `
-            <button class="btn btn-primary btn-sm" onclick="mpOpenFundModal(${loan.id})">
-              <i class="fa-solid fa-bolt"></i> Fund This Loan
-            </button>
-          ` : ''}
-          ${loan.statusLabel === 'Approved' && loan.lender?.toLowerCase() === window.web3.address?.toLowerCase() ? `
-            <button class="btn btn-primary btn-sm" onclick="disburseLoan(${loan.id}, '${loan.principalAmount}')">
-              <i class="fa-solid fa-paper-plane"></i> Disburse
-            </button>
-          ` : ''}
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
 
 function openApproveLoanModal(loanId) {
   showModal({

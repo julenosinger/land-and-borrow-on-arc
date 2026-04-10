@@ -93,8 +93,9 @@ async function loadMarketplace(forceRefresh = false) {
   const container = document.getElementById('marketplace-listings');
   if (!container) return;
 
-  // Guard: contract must be configured
-  if (!window.web3?.contract) {
+  // Guard: need either signed contract or read-only contract
+  const rc = window.web3?.getReadContract?.();
+  if (!rc) {
     _mpShowBanner(container, '🔧', 'Contract Not Configured',
       'Set the ArcFiLoanManager address in <button onclick="showPage(\'settings\')" class="underline-link" style="background:none;border:none;cursor:pointer;font-family:inherit;">Settings</button>.',
       false);
@@ -115,8 +116,9 @@ async function loadMarketplace(forceRefresh = false) {
 
   try {
     // ── 1. Get total loan count ───────────────────────────────────────────────
-    const totalBN   = await window.web3.contract.getTotalLoans();
-    const total     = Number(totalBN);
+    const rc         = window.web3.getReadContract();
+    const totalBN    = await rc.getTotalLoans();
+    const total      = Number(totalBN);
 
     if (total === 0) {
       MP.allLoans  = [];
@@ -138,14 +140,14 @@ async function loadMarketplace(forceRefresh = false) {
       for (let id = start; id <= end; id++) ids.push(id);
 
       try {
-        const batch = await window.web3.contract.getLoansBatch(ids);
+        const batch = await rc.getLoansBatch(ids);
         batch.forEach(raw => allRaw.push(raw));
       } catch (batchErr) {
         // Fallback: individual calls if batch fails
         console.warn('Batch failed, falling back to individual calls', batchErr.message);
         for (const id of ids) {
           try {
-            const raw = await window.web3.contract.getLoan(id);
+            const raw = await rc.getLoan(id);
             allRaw.push(raw);
           } catch { /* skip invalid loan */ }
         }
@@ -632,10 +634,11 @@ async function mpViewLoanDetail(loanId) {
   // Try cache first; fetch from chain if not available
   let loan = MP.allLoans.find(l => l.id == loanId);
 
-  if (!loan && window.web3?.contract) {
+  const rc = window.web3?.getReadContract?.();
+  if (!loan && rc) {
     const t = showToast('Loading details…', 'info', 0);
     try {
-      const raw = await window.web3.contract.getLoan(loanId);
+      const raw = await rc.getLoan(loanId);
       loan = window.web3._normalizeLoan(raw);
       t?.remove?.();
     } catch (e) {
@@ -722,7 +725,8 @@ async function loadLenderLoans() {
   const tbody = document.getElementById('lender-loans-tbody');
   if (!tbody) return;
 
-  if (!window.web3?.contract) {
+  const rc = window.web3?.getReadContract?.();
+  if (!rc) {
     tbody.innerHTML = _lendEmptyRow('🔧', 'Contract not configured', 'Set the contract address in <button onclick="showPage(\'settings\')" style="background:none;border:none;cursor:pointer;color:var(--cyan);text-decoration:underline;">Settings</button>.');
     return;
   }
@@ -730,7 +734,7 @@ async function loadLenderLoans() {
   tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="spinner dark"></div></div></td></tr>`;
 
   try {
-    const total = Number(await window.web3.contract.getTotalLoans());
+    const total = Number(await rc.getTotalLoans());
 
     if (total === 0) {
       _lendAllLoans = [];
@@ -745,11 +749,11 @@ async function loadLenderLoans() {
       const end = Math.min(s + BATCH - 1, total);
       const ids = Array.from({ length: end - s + 1 }, (_, i) => s + i);
       try {
-        const b = await window.web3.contract.getLoansBatch(ids);
+        const b = await rc.getLoansBatch(ids);
         b.forEach(r => raw.push(r));
       } catch {
         for (const id of ids) {
-          try { raw.push(await window.web3.contract.getLoan(id)); } catch {}
+          try { raw.push(await rc.getLoan(id)); } catch {}
         }
       }
     }
