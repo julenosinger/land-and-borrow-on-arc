@@ -12,7 +12,7 @@ const ARC_EXPLORER  = "https://explorer.arc.fun";
 const CONTRACT_ADDRESS    = "0x413508DBCb5Cbf86b93C09b9AE633Af8B14cEF5F";
 // USDC on Arc Testnet — native ERC-20 precompile
 const USDC_ADDRESS        = "0x3600000000000000000000000000000000000000";
-// Marketplace is still off-chain / API-based (no separate contract)
+// No separate marketplace contract — marketplace reads directly from ArcFiLoanManager
 const MARKETPLACE_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 // ── Loan Status Enum (mirrors Solidity) ───────────────────────────────────────

@@ -764,16 +764,13 @@ function renderLenderTable(loans) {
           <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})">
             <i class="fa-solid fa-eye"></i>
           </button>
-          ${loan.statusLabel === 'PENDING' ? `
-            <button class="btn btn-success btn-sm" onclick="openApproveLoanModal(${loan.id})">
-              <i class="fa-solid fa-check"></i> Approve
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="rejectLoan(${loan.id})">
-              <i class="fa-solid fa-xmark"></i>
+          ${loan.statusLabel === 'Requested' ? `
+            <button class="btn btn-primary btn-sm" onclick="mpOpenFundModal(${loan.id})">
+              <i class="fa-solid fa-bolt"></i> Fund This Loan
             </button>
           ` : ''}
-          ${loan.statusLabel === 'APPROVED' && loan.lender?.toLowerCase() === window.web3.address?.toLowerCase() ? `
-            <button class="btn btn-primary btn-sm" onclick="disburseLoan(${loan.id}, ${loan.principalAmount})">
+          ${loan.statusLabel === 'Approved' && loan.lender?.toLowerCase() === window.web3.address?.toLowerCase() ? `
+            <button class="btn btn-primary btn-sm" onclick="disburseLoan(${loan.id}, '${loan.principalAmount}')">
               <i class="fa-solid fa-paper-plane"></i> Disburse
             </button>
           ` : ''}
@@ -893,7 +890,7 @@ async function viewLoanDetails(loanId) {
             <div class="card-title" style="font-size:13px; margin-bottom:12px; color:var(--cyan);">💵 Loan Terms</div>
             <div class="detail-row"><span class="detail-label">Principal</span><span class="detail-value mono text-cyan">$${parseFloat(loan.principalAmount).toFixed(2)}</span></div>
             <div class="detail-row"><span class="detail-label">Total Repayable</span><span class="detail-value mono">$${parseFloat(loan.totalRepayable||0).toFixed(2)}</span></div>
-            <div class="detail-row"><span class="detail-label">Interest Rate</span><span class="detail-value">${(loan.interestRateMonthly/100).toFixed(2)}% / month</span></div>
+            <div class="detail-row"><span class="detail-label">Interest Rate</span><span class="detail-value">${loan.interestRateMonthly > 0 ? loan.interestRateMonthly + '%' : 'Set by lender'} / month</span></div>
             <div class="detail-row"><span class="detail-label">Installments</span><span class="detail-value">${loan.paidInstallments}/${loan.totalInstallments} paid</span></div>
             <div class="detail-row" style="border:none;"><span class="detail-label">Status</span>${statusBadge(loan.statusLabel)}</div>
           </div>
@@ -908,26 +905,23 @@ async function viewLoanDetails(loanId) {
               <div class="detail-row"><span class="detail-label">Jurisdiction</span><span class="detail-value">${col.jurisdiction}</span></div>
               <div class="detail-row"><span class="detail-label">Verified</span>${col.rwaVerified ? '<span class="badge badge-active">✓ Verified</span>' : '<span class="badge badge-pending">Pending</span>'}</div>
               <div class="detail-row" style="border:none;"><span class="detail-label">Doc Hash</span><span class="detail-value mono text-xs break-all">${col.documentHash}</span></div>
-              ${loan.statusLabel === 'PENDING' && !col.rwaVerified ? `
-                <button class="btn btn-primary btn-sm btn-full" style="margin-top:10px;" onclick="verifyRWA(${loanId})">
-                  <i class="fa-solid fa-stamp"></i> Verify Document
-                </button>` : ''}
+
             ` : `
               <div class="detail-row"><span class="detail-label">Token</span><span class="detail-value mono text-xs">${col.cryptoToken}</span></div>
               <div class="detail-row"><span class="detail-label">Amount</span><span class="detail-value mono">${parseFloat(col.cryptoAmount).toFixed(2)}</span></div>
-              <div class="detail-row"><span class="detail-label">Ratio</span><span class="detail-value">${col.collateralRatio/100}%</span></div>
-              <div class="detail-row" style="border:none;"><span class="detail-label">Status</span>${col.cryptoLocked ? '<span class="badge badge-active">🔒 Locked</span>' : '<span class="badge badge-cancelled">Unlocked</span>'}</div>
+              <div class="detail-row"><span class="detail-label">Ratio</span><span class="detail-value">${col.collateralRatio}%</span></div>
+              <div class="detail-row" style="border:none;"><span class="detail-label">Collateral</span><span class="badge badge-active">🔐 On-Chain</span></div>
             `}
           </div>
           <div class="card card-sm" style="background:var(--bg-input);">
             <div class="card-title" style="font-size:13px; margin-bottom:10px; color:var(--cyan);">📅 Schedule</div>
             <div class="space-y-2">
               ${loan.installments.map((inst,i) => `
-                <div class="installment-row ${inst.statusLabel === 'PAID' ? 'paid' : inst.statusLabel === 'OVERDUE' ? 'overdue' : ''}">
+                <div class="installment-row ${inst.status === 'Paid' ? 'paid' : inst.status === 'Overdue' ? 'overdue' : ''}">
                   <span class="text-xs font-mono" style="color:var(--text-muted); min-width:24px;">#${i+1}</span>
                   <span class="text-sm mono" style="flex:1;">$${parseFloat(inst.amount).toFixed(2)}</span>
                   <span class="text-xs text-muted">${formatDate(inst.dueDate)}</span>
-                  ${statusBadge(inst.statusLabel,'small')}
+                  ${statusBadge(inst.status)}
                 </div>
               `).join('')}
             </div>
@@ -972,12 +966,13 @@ async function loadDashboard() {
 
   try {
     const loans = await window.web3.getBorrowerLoans();
-    const active    = loans.filter(l => l.statusLabel === 'ACTIVE').length;
-    const completed = loans.filter(l => l.statusLabel === 'COMPLETED').length;
+    const active    = loans.filter(l => l.statusLabel === 'Active').length;
+    const completed = loans.filter(l => l.statusLabel === 'Repaid').length;
     const borrowed  = loans.reduce((s,l) => s + parseFloat(l.principalAmount||0), 0);
     let   remaining = 0;
-    for (const l of loans.filter(l => l.statusLabel === 'ACTIVE')) {
-      remaining += parseFloat(await window.web3.getRemainingAmount(l.id) || 0);
+    for (const l of loans.filter(l => l.statusLabel === 'Active')) {
+      const rem = await window.web3.getRemainingAmount(l.id);
+      remaining += parseFloat(rem?.remaining || 0);
     }
 
     document.getElementById('ds-active').textContent    = active;
@@ -994,7 +989,7 @@ async function loadDashboard() {
       <tr>
         <td class="mono font-bold" style="color:var(--cyan);">#${loan.id}</td>
         <td class="mono" style="color:var(--text-primary);">$${parseFloat(loan.principalAmount).toFixed(2)}</td>
-        <td style="color:var(--green); font-size:12px;">${(loan.interestRateMonthly/100).toFixed(2)}%/mo</td>
+        <td style="color:var(--green); font-size:12px;">${loan.interestRateMonthly > 0 ? loan.interestRateMonthly + '%/mo' : '—'}</td>
         <td>${loan.totalInstallments}</td>
         <td style="min-width:140px;">
           <div style="display:flex; align-items:center; gap:8px;">
@@ -1008,11 +1003,11 @@ async function loadDashboard() {
         <td>
           <div class="flex" style="gap:6px; flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})"><i class="fa-solid fa-eye"></i></button>
-            ${loan.statusLabel === 'ACTIVE' ? `
+            ${loan.statusLabel === 'Active' ? `
               <button class="btn btn-primary btn-sm" onclick="showPage('payments'); setTimeout(()=>loadLoanInstallments(${loan.id}),300)">
                 <i class="fa-solid fa-credit-card"></i> Pay
               </button>` : ''}
-            ${loan.statusLabel === 'PENDING' ? `
+            ${loan.statusLabel === 'Requested' ? `
               <button class="btn btn-danger btn-sm" onclick="cancelLoan(${loan.id})">Cancel</button>` : ''}
           </div>
         </td>
@@ -1048,7 +1043,7 @@ async function loadPayments() {
   const loans = await window.web3.getBorrowerLoans();
   const select = document.getElementById('pay-loan-select');
   select.innerHTML = '<option value="">— Select a loan —</option>';
-  loans.filter(l => l.statusLabel === 'ACTIVE').forEach(l => {
+  loans.filter(l => l.statusLabel === 'Active').forEach(l => {
     select.innerHTML += `<option value="${l.id}">Loan #${l.id} — $${parseFloat(l.principalAmount).toFixed(2)} USDC (${l.paidInstallments}/${l.totalInstallments} paid)</option>`;
   });
 }
@@ -1081,8 +1076,8 @@ async function loadLoanInstallments(loanId) {
   // Installment list
   const list = document.getElementById('installments-list');
   list.innerHTML = loan.installments.map((inst, i) => {
-    const isPaid = inst.statusLabel === 'PAID';
-    const isOverdue = inst.statusLabel === 'OVERDUE';
+    const isPaid = inst.status === 'Paid';
+    const isOverdue = inst.status === 'Overdue';
     return `
       <div class="installment-row ${isPaid ? 'paid' : isOverdue ? 'overdue' : ''}">
         <span class="text-xs mono text-muted" style="min-width:20px;">#${i+1}</span>
@@ -1090,8 +1085,8 @@ async function loadLoanInstallments(loanId) {
           <div class="text-sm font-bold mono" style="color:var(--text-primary);">$${parseFloat(inst.amount).toFixed(2)} USDC</div>
           <div class="text-xs text-muted">Due: ${formatDate(inst.dueDate)}${inst.paidDate ? ` · Paid: ${formatDate(inst.paidDate)}` : ''}</div>
         </div>
-        ${statusBadge(inst.statusLabel,'small')}
-        ${!isPaid && loan.statusLabel === 'ACTIVE' ? `
+        ${statusBadge(inst.status)}
+        ${!isPaid && loan.statusLabel === 'Active' ? `
           <button class="btn btn-primary btn-sm" onclick="payInstallment(${loanId}, ${i}, ${inst.amount})">
             <i class="fa-solid fa-circle-dollar-to-slot"></i> Pay
           </button>
@@ -1103,9 +1098,9 @@ async function loadLoanInstallments(loanId) {
   document.getElementById('installments-card').style.display = 'block';
 
   // Full repay
-  const remaining = loan.installments.filter(i => i.statusLabel==='PENDING').reduce((s,i) => s+parseFloat(i.amount),0);
-  const pendingCount = loan.installments.filter(i => i.statusLabel==='PENDING').length;
-  if (pendingCount > 0 && loan.statusLabel === 'ACTIVE') {
+  const remaining = loan.installments.filter(i => i.status === 'Pending').reduce((s,i) => s+parseFloat(i.amount),0);
+  const pendingCount = loan.installments.filter(i => i.status === 'Pending').length;
+  if (pendingCount > 0 && loan.statusLabel === 'Active') {
     document.getElementById('pay-remaining-total').textContent = `$${remaining.toFixed(2)} USDC`;
     document.getElementById('pay-pending-count').textContent   = pendingCount;
     document.getElementById('pay-full-card').style.display     = 'block';
@@ -1118,7 +1113,7 @@ async function loadLoanInstallments(loanId) {
 }
 
 function renderPaymentHistory(loan) {
-  const paidInst = loan.installments.filter(i => i.statusLabel === 'PAID');
+  const paidInst = loan.installments.filter(i => i.status === 'Paid');
   const container = document.getElementById('payment-history-list');
   if (!paidInst.length) {
     container.innerHTML = '<div class="empty-state" style="padding:24px;"><div class="empty-icon" style="font-size:32px;">💳</div><div class="empty-title">No payments yet</div></div>';
@@ -1175,7 +1170,7 @@ async function payFullLoan() {
 
   try {
     const loan = await window.web3.getLoanFull(loanId);
-    const pending = loan.installments.filter(i => i.statusLabel === 'PENDING');
+    const pending = loan.installments.filter(i => i.status === 'Pending');
     let lastTx = null;
 
     for (const inst of pending) {
@@ -1240,12 +1235,13 @@ function showReceiptModal(data) {
     ]
   });
 
-  // Save receipt via API
-  fetch('/api/receipts', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ ...data, wallet: window.web3.address, timestamp: Date.now() })
-  }).catch(() => {});
+  // Store receipt locally (no backend — fully on-chain DApp)
+  try {
+    const receipts = JSON.parse(localStorage.getItem('arcfi-receipts') || '[]');
+    receipts.unshift({ ...data, wallet: window.web3.address, timestamp: Date.now() });
+    if (receipts.length > 50) receipts.length = 50;
+    localStorage.setItem('arcfi-receipts', JSON.stringify(receipts));
+  } catch {}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1304,8 +1300,8 @@ async function addArcNetwork() {
       params: [{
         chainId: ethers.utils.hexValue(5042002),
         chainName: 'Arc Testnet',
-        nativeCurrency: { name: 'ARC', symbol: 'ARC', decimals: 18 },
-        rpcUrls: ['https://rpc.arc.fun'],
+        nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 6 },
+        rpcUrls: ['https://rpc.testnet.arc.network'],
         blockExplorerUrls: ['https://explorer.arc.fun']
       }]
     });
@@ -1386,7 +1382,19 @@ if (window.chatbot) {
 // HELPERS
 // ══════════════════════════════════════════════════════════════
 function statusBadge(status) {
+  // Supports both on-chain labels (title-case) and legacy UPPERCASE labels
   const map = {
+    // On-chain labels from ArcFiLoanManager
+    'Requested': 'badge-pending',
+    'Approved':  'badge-approved',
+    'Active':    'badge-active',
+    'Repaid':    'badge-completed',
+    'Defaulted': 'badge-defaulted',
+    // Installment labels (from _normalizeLoan)
+    'Paid':    'badge-paid',
+    'Pending': 'badge-pending',
+    'Overdue': 'badge-overdue',
+    // Legacy UPPERCASE — kept for backward-compat
     PENDING:'badge-pending', APPROVED:'badge-approved', ACTIVE:'badge-active',
     COMPLETED:'badge-completed', DEFAULTED:'badge-defaulted', REJECTED:'badge-rejected',
     CANCELLED:'badge-cancelled', PAID:'badge-paid', OVERDUE:'badge-overdue'

@@ -328,24 +328,24 @@ app.get('/', (c) => {
     <div class="flex items-center justify-between mb-6" style="flex-wrap:wrap; gap:12px;">
       <div>
         <div class="section-title"><i class="fa-solid fa-store text-cyan" style="margin-right:8px;"></i>Loan Marketplace</div>
-        <div class="section-sub" style="margin-bottom:0;">Browse active lender offers. Select one to apply with pre-filled terms.</div>
+        <div class="section-sub" style="margin-bottom:0;">Browse open loan requests on-chain. Fund directly via ArcFiLoanManager.</div>
       </div>
       <div class="flex" style="gap:10px; flex-wrap:wrap; align-items:center;">
-        <button class="btn btn-primary" onclick="showPage('lend')">
-          <i class="fa-solid fa-plus"></i> Create Offer
+        <button class="btn btn-primary" onclick="showPage('borrow')">
+          <i class="fa-solid fa-plus"></i> Request a Loan
         </button>
-        <button class="btn btn-secondary" onclick="loadMarketplace()">
+        <button class="btn btn-secondary" onclick="loadMarketplace(true)">
           <i class="fa-solid fa-rotate"></i> Refresh
         </button>
       </div>
     </div>
 
-    <!-- Marketplace Stats -->
+    <!-- Marketplace Stats (on-chain) -->
     <div class="col-4" id="marketplace-stats" style="margin-bottom:24px;">
-      <div class="stat-card cyan"><div class="accent-blob" style="background:var(--cyan)"></div><div class="stat-label">Active Offers</div><div class="stat-value" id="mp-stat-offers">—</div></div>
-      <div class="stat-card blue"><div class="accent-blob" style="background:var(--blue)"></div><div class="stat-label">Total Liquidity</div><div class="stat-value" id="mp-stat-liquidity">—</div></div>
-      <div class="stat-card" style="border-color:rgba(16,185,129,0.25)"><div class="accent-blob" style="background:var(--green)"></div><div class="stat-label">Avg Interest Rate</div><div class="stat-value" id="mp-stat-rate">—</div></div>
-      <div class="stat-card"><div class="accent-blob" style="background:var(--purple)"></div><div class="stat-label">Loans Issued</div><div class="stat-value" id="mp-stat-loans">—</div></div>
+      <div class="stat-card cyan"><div class="accent-blob" style="background:var(--cyan)"></div><div class="stat-label">Open Requests</div><div class="stat-value" id="mp-stat-requests">—</div></div>
+      <div class="stat-card blue"><div class="accent-blob" style="background:var(--blue)"></div><div class="stat-label">Active Loans</div><div class="stat-value" id="mp-stat-active">—</div></div>
+      <div class="stat-card" style="border-color:rgba(16,185,129,0.25)"><div class="accent-blob" style="background:var(--green)"></div><div class="stat-label">Total Volume</div><div class="stat-value" id="mp-stat-volume">—</div></div>
+      <div class="stat-card"><div class="accent-blob" style="background:var(--purple)"></div><div class="stat-label">All Loans</div><div class="stat-value" id="mp-stat-total">—</div></div>
     </div>
 
     <!-- Filters -->
@@ -376,17 +376,17 @@ app.get('/', (c) => {
           <label class="form-label" style="font-size:11px;">Collateral Type</label>
           <select id="mp-filter-col" class="form-control" onchange="applyMarketplaceFilters()">
             <option value="">Any</option>
-            <option value="1">RWA Only</option>
-            <option value="2">Crypto Only</option>
-            <option value="3">Both</option>
+            <option value="RWA">RWA Only</option>
+            <option value="CRYPTO">Crypto Only</option>
           </select>
         </div>
         <div class="form-group" style="margin:0;">
-          <label class="form-label" style="font-size:11px;">Lender Type</label>
-          <select id="mp-filter-type" class="form-control" onchange="applyMarketplaceFilters()">
-            <option value="">Any</option>
-            <option value="0">Individual</option>
-            <option value="1">Company</option>
+          <label class="form-label" style="font-size:11px;">Sort By</label>
+          <select id="mp-sort" class="form-control" onchange="applyMarketplaceFilters()">
+            <option value="newest">Newest First</option>
+            <option value="amount_desc">Amount ↑</option>
+            <option value="amount_asc">Amount ↓</option>
+            <option value="installments">Installments</option>
           </select>
         </div>
         <div class="form-group" style="margin:0; display:flex; align-items:flex-end;">
@@ -397,12 +397,16 @@ app.get('/', (c) => {
       </div>
     </div>
 
-    <!-- Offer Listings -->
+    <!-- Result count + Listings -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <span style="font-size:13px; color:var(--text-muted);"><span id="mp-result-count"></span></span>
+      <span style="font-size:11px; color:var(--text-muted);">100% on-chain · Arc Testnet</span>
+    </div>
     <div id="marketplace-listings" class="grid-auto">
       <div class="card" style="padding:48px; text-align:center; grid-column:1/-1;">
-        <div class="empty-icon" style="font-size:48px; margin-bottom:12px;">🏪</div>
-        <div class="empty-title">Loading marketplace…</div>
-        <div class="empty-desc">Fetching active lender offers from Arc Testnet.</div>
+        <div class="empty-icon" style="font-size:48px; margin-bottom:12px;">⛓️</div>
+        <div class="empty-title">Loading on-chain data…</div>
+        <div class="empty-desc">Reading loan requests from ArcFiLoanManager on Arc Testnet.</div>
       </div>
     </div>
 
@@ -436,8 +440,8 @@ app.get('/', (c) => {
 
     <!-- Summary Stats -->
     <div class="col-4" style="margin-bottom:24px;">
-      <div class="stat-card cyan"><div class="accent-blob" style="background:var(--cyan)"></div><div class="stat-label">Active Offers</div><div class="stat-value" id="ml-stat-offers">—</div></div>
-      <div class="stat-card blue"><div class="accent-blob" style="background:var(--blue)"></div><div class="stat-label">Total Deployed</div><div class="stat-value" id="ml-stat-deployed">—</div></div>
+      <div class="stat-card cyan"><div class="accent-blob" style="background:var(--cyan)"></div><div class="stat-label">Active Offers</div><div class="stat-value" id="ml-stat-active">—</div></div>
+      <div class="stat-card blue"><div class="accent-blob" style="background:var(--blue)"></div><div class="stat-label">Total Deployed</div><div class="stat-value" id="ml-stat-vol">—</div></div>
       <div class="stat-card" style="border-color:rgba(16,185,129,0.25)"><div class="accent-blob" style="background:var(--green)"></div><div class="stat-label">Total Repaid</div><div class="stat-value" id="ml-stat-repaid">—</div></div>
       <div class="stat-card"><div class="accent-blob" style="background:var(--purple)"></div><div class="stat-label">Active Loans</div><div class="stat-value" id="ml-stat-active-loans">—</div></div>
     </div>
@@ -1082,183 +1086,93 @@ app.get('/', (c) => {
 
     <div class="tabs" id="lend-tabs" style="margin-bottom:24px;">
       <button class="tab-btn active" data-lend-tab="offer-form" onclick="switchLendTab('offer-form',this)">
-        <i class="fa-solid fa-plus"></i> Create Offer
+        <i class="fa-solid fa-plus"></i> Lending Info
       </button>
       <button class="tab-btn" data-lend-tab="loan-requests" onclick="switchLendTab('loan-requests',this)">
-        <i class="fa-solid fa-inbox"></i> Loan Requests
+        <i class="fa-solid fa-inbox"></i> All Loan Requests
+      </button>
+      <button class="tab-btn" data-lend-tab="my-lending" onclick="switchLendTab('my-lending',this)">
+        <i class="fa-solid fa-building-columns"></i> My Lending
       </button>
     </div>
 
-    <!-- ── Tab: Create Offer ──────────────────────────────────────────────── -->
+    <!-- ── Tab: Lending Info (on-chain) ─────────────────────────────────── -->
     <div id="lend-tab-offer-form">
       <div class="grid-2" style="gap:24px; align-items:start;">
-        <!-- Form -->
+
+        <!-- How-to Lend Card -->
         <div class="card card-lg">
           <div class="card-header">
-            <div class="card-title"><i class="fa-solid fa-file-invoice text-cyan"></i>New Lending Offer</div>
-            <span class="badge badge-active">Liquidity Locked On-Chain</span>
+            <div class="card-title"><i class="fa-solid fa-bolt text-cyan"></i>How to Lend on ArcFi</div>
+            <span class="badge badge-active">100% On-Chain</span>
           </div>
-
           <div class="form-section">
-            <!-- Lender Identity -->
-            <div style="margin-bottom:20px;">
-              <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">Lender Identity</div>
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label class="form-label">Lender Name / Company <span class="req">*</span></label>
-                  <input id="of-name" class="form-control" type="text" placeholder="e.g. John Smith or Acme Capital" />
-                  <span class="field-error" id="of-name-err"></span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Lender Type <span class="req">*</span></label>
-                  <div class="token-chips">
-                    <button class="token-chip selected" data-lender-type="0" onclick="selectLenderType(this,0)">👤 Individual</button>
-                    <button class="token-chip" data-lender-type="1" onclick="selectLenderType(this,1)">🏢 Company</button>
-                  </div>
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Wallet Address <span class="req">*</span></label>
-                <div class="input-group">
-                  <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                  <input id="of-wallet" class="form-control mono" type="text" placeholder="Auto-detected on wallet connect" readonly />
-                </div>
-                <span class="field-hint">Auto-detected from connected wallet — non-custodial</span>
+            <div class="legal-banner legal-banner-info" style="margin-bottom:20px;">
+              <i class="fa-solid fa-info-circle" style="flex-shrink:0;"></i>
+              <div>
+                ArcFi is a fully decentralized, non-custodial lending protocol on Arc Testnet.
+                <strong>No marketplace contract</strong> — lenders fund borrower requests directly through
+                the <code>ArcFiLoanManager</code> contract.
               </div>
             </div>
 
-            <!-- Liquidity -->
-            <div style="margin-bottom:20px;">
-              <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">Liquidity Lock</div>
-              <div class="form-group">
-                <label class="form-label">Total USDC to Deposit <span class="req">*</span></label>
-                <div class="input-group">
-                  <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  <input id="of-liquidity" class="form-control" type="number" min="1" step="0.01" placeholder="e.g. 10000" oninput="updateOfferPreview()" />
-                  <span class="input-suffix">USDC</span>
+            <div style="display:flex; flex-direction:column; gap:16px;">
+              <div class="card" style="background:var(--bg-input); padding:16px;">
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                  <div style="background:var(--cyan); color:#000; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0;">1</div>
+                  <div>
+                    <div style="font-weight:700; margin-bottom:4px;">Browse Loan Requests</div>
+                    <div style="font-size:13px; color:var(--text-secondary);">Go to the <strong>Marketplace</strong> tab or <strong>All Loan Requests</strong> to view open borrower requests with status = Requested.</div>
+                    <button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="showPage('marketplace')">
+                      <i class="fa-solid fa-store"></i> Open Marketplace
+                    </button>
+                  </div>
                 </div>
-                <span class="field-hint">USDC will be locked in smart contract escrow. Withdraw unused liquidity anytime.</span>
-                <span class="field-error" id="of-liquidity-err"></span>
               </div>
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label class="form-label">Min Loan Amount <span class="req">*</span></label>
-                  <div class="input-group">
-                    <input id="of-min-loan" class="form-control" type="number" min="1" placeholder="e.g. 500" oninput="updateOfferPreview()" />
-                    <span class="input-suffix">USDC</span>
+
+              <div class="card" style="background:var(--bg-input); padding:16px;">
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                  <div style="background:var(--cyan); color:#000; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0;">2</div>
+                  <div>
+                    <div style="font-weight:700; margin-bottom:4px;">Set Interest Rate &amp; Approve</div>
+                    <div style="font-size:13px; color:var(--text-secondary);">Click <strong>Fund This Loan</strong> on any request. Enter your interest rate (1–5%/month). This calls <code>approveLoan(loanId, rate)</code> on-chain.</div>
                   </div>
-                  <span class="field-error" id="of-min-loan-err"></span>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Max Loan Amount <span class="req">*</span></label>
-                  <div class="input-group">
-                    <input id="of-max-loan" class="form-control" type="number" min="1" placeholder="e.g. 5000" oninput="updateOfferPreview()" />
-                    <span class="input-suffix">USDC</span>
+              </div>
+
+              <div class="card" style="background:var(--bg-input); padding:16px;">
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                  <div style="background:var(--cyan); color:#000; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0;">3</div>
+                  <div>
+                    <div style="font-weight:700; margin-bottom:4px;">Fund the Loan</div>
+                    <div style="font-size:13px; color:var(--text-secondary);">Approve USDC allowance, then call <code>fundLoan(loanId)</code>. USDC transfers directly to the borrower's wallet. No escrow, no intermediary.</div>
                   </div>
-                  <span class="field-error" id="of-max-loan-err"></span>
+                </div>
+              </div>
+
+              <div class="card" style="background:var(--bg-input); padding:16px;">
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                  <div style="background:var(--green); color:#000; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0;">4</div>
+                  <div>
+                    <div style="font-weight:700; margin-bottom:4px;">Receive Repayments</div>
+                    <div style="font-size:13px; color:var(--text-secondary);">Borrower calls <code>repayInstallment()</code> periodically. Each payment transfers USDC directly to your wallet. Track in <strong>My Lending</strong>.</div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Terms -->
-            <div style="margin-bottom:20px;">
-              <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">Loan Terms</div>
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label class="form-label">Monthly Interest Rate <span class="req">*</span></label>
-                  <div class="input-group">
-                    <input id="of-rate" class="form-control" type="number" min="0" max="5" step="0.01" placeholder="e.g. 3.5" oninput="updateOfferPreview()" />
-                    <span class="input-suffix">%/mo</span>
-                  </div>
-                  <span class="field-hint">Maximum 5% per month — fixed, no compounding</span>
-                  <span class="field-error" id="of-rate-err"></span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Max Installments <span class="req">*</span></label>
-                  <select id="of-installments" class="form-control" onchange="updateOfferPreview()">
-                    <option value="">— Select —</option>
-                    <option value="1">1</option><option value="2">2</option>
-                    <option value="3">3</option><option value="4">4</option>
-                    <option value="5">5</option><option value="6">6</option>
-                    <option value="7">7</option><option value="8">8</option>
-                    <option value="9">9</option><option value="10">10</option>
-                  </select>
-                  <span class="field-error" id="of-installments-err"></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Collateral Preferences -->
-            <div style="margin-bottom:20px;">
-              <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">Collateral Preferences</div>
-              <div class="form-group">
-                <label class="form-label">Accepted Collateral <span class="req">*</span></label>
-                <div class="token-chips" id="of-col-chips">
-                  <button class="token-chip" data-col-val="1" onclick="selectOfferCollateral(this,1)">🏠 RWA Only</button>
-                  <button class="token-chip" data-col-val="2" onclick="selectOfferCollateral(this,2)">🔐 Crypto Only</button>
-                  <button class="token-chip selected" data-col-val="3" onclick="selectOfferCollateral(this,3)">🌐 Both</button>
-                </div>
-                <span class="field-error" id="of-col-err"></span>
-              </div>
-              <div class="form-group" id="of-ratio-group">
-                <label class="form-label">Min Collateral Ratio (Crypto) — <span id="of-ratio-display" class="text-cyan font-mono">120%</span></label>
-                <input type="range" id="of-col-ratio" min="120" max="300" step="10" value="120" oninput="document.getElementById('of-ratio-display').textContent=this.value+'%'" />
-                <div class="flex" style="justify-content:space-between; margin-top:4px;">
-                  <span class="text-xs text-muted">120% (Min)</span>
-                  <span class="text-xs text-muted">300% (Max)</span>
-                </div>
-              </div>
-              <div class="form-grid-2">
-                <div class="form-group">
-                  <label class="form-label">Geographic Restrictions <span class="opt">(optional)</span></label>
-                  <input id="of-geo" class="form-control" type="text" placeholder="e.g. US,EU or GLOBAL" value="GLOBAL" />
-                  <span class="field-hint">Comma-separated country codes or "GLOBAL"</span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Borrower Preferences <span class="opt">(optional)</span></label>
-                  <input id="of-prefs" class="form-control" type="text" placeholder="e.g. Employed, 1+ year history" />
-                </div>
+            <div class="legal-banner legal-banner-warning" style="margin-top:20px;">
+              <i class="fa-solid fa-scale-balanced" style="flex-shrink:0;"></i>
+              <div>
+                <strong>Risk Disclosure:</strong> RWA collateral enforcement is off-chain only. Crypto collateral enforcement is on-chain and automatic. You assume full default risk. This is not financial advice.
               </div>
             </div>
           </div>
-
-          <!-- Legal Notice -->
-          <div class="legal-banner legal-banner-warning" style="margin-bottom:20px;">
-            <i class="fa-solid fa-gavel" style="flex-shrink:0; margin-top:2px;"></i>
-            <div>
-              <strong>Lender Risk Assumption:</strong> By creating this offer you accept that: (1) RWA enforcement is off-chain only; (2) Crypto collateral is auto-enforced on-chain; (3) You assume full default risk. ArcFi is a non-custodial, non-liability protocol.
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-full btn-lg" id="create-offer-btn" onclick="submitOffer()">
-            <i class="fa-solid fa-lock"></i> Lock Liquidity &amp; Create Offer
-          </button>
         </div>
 
-        <!-- Preview -->
+        <!-- Right Column: Stats -->
         <div class="space-y-4">
-          <div class="card" id="offer-preview-card" style="background:var(--bg-input);">
-            <div class="card-title" style="margin-bottom:16px; color:var(--cyan); font-size:14px;"><i class="fa-solid fa-eye"></i>Offer Preview</div>
-            <div id="offer-preview-content">
-              <div class="empty-state" style="padding:24px;">
-                <div class="empty-icon" style="font-size:32px;">📋</div>
-                <div class="empty-desc">Fill in the form to see a preview of your offer card.</div>
-              </div>
-            </div>
-          </div>
-
           <div class="card" style="background:var(--bg-input);">
-            <div class="card-title" style="margin-bottom:14px; font-size:14px;"><i class="fa-solid fa-circle-info text-cyan"></i>How Liquidity Lock Works</div>
-            <div class="space-y-3" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
-              <div class="flex" style="gap:10px;"><span style="color:var(--cyan); font-size:18px;">1</span><span><strong>Deposit USDC</strong> — locked in the smart contract escrow, non-custodially.</span></div>
-              <div class="flex" style="gap:10px;"><span style="color:var(--cyan); font-size:18px;">2</span><span><strong>Borrowers apply</strong> — they browse your offer and submit loan requests.</span></div>
-              <div class="flex" style="gap:10px;"><span style="color:var(--cyan); font-size:18px;">3</span><span><strong>Allocation</strong> — on approval, USDC is atomically allocated to the loan.</span></div>
-              <div class="flex" style="gap:10px;"><span style="color:var(--cyan); font-size:18px;">4</span><span><strong>Repayments flow back</strong> — each installment increases your available liquidity.</span></div>
-              <div class="flex" style="gap:10px;"><span style="color:var(--cyan); font-size:18px;">5</span><span><strong>Withdraw anytime</strong> — unused liquidity can be withdrawn at any time.</span></div>
-            </div>
-          </div>
-
-          <div class="card">
             <div class="card-title" style="margin-bottom:14px; font-size:14px;"><i class="fa-solid fa-wallet text-cyan"></i>Your USDC Balance</div>
             <div class="flex items-center justify-between">
               <div>
@@ -1266,15 +1180,51 @@ app.get('/', (c) => {
                 <div class="stat-value" id="of-usdc-balance" style="font-size:22px;">—</div>
               </div>
               <button class="btn btn-secondary btn-sm" onclick="refreshOfferBalance()">
-                <i class="fa-solid fa-rotate"></i>
+                <i class="fa-solid fa-rotate"></i> Refresh
               </button>
             </div>
+          </div>
+
+          <div class="card" style="background:var(--bg-input);">
+            <div class="card-title" style="margin-bottom:14px; font-size:14px;"><i class="fa-solid fa-calculator text-cyan"></i>Interest Calculator</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" style="font-size:11px;">Principal (USDC)</label>
+                <input id="of-liquidity" class="form-control" type="number" placeholder="e.g. 1000" oninput="updateOfferPreview()" />
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" style="font-size:11px;">Rate (%/mo)</label>
+                <input id="of-rate" class="form-control" type="number" min="1" max="5" step="1" placeholder="1–5" oninput="updateOfferPreview()" />
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" style="font-size:11px;">Installments</label>
+                <select id="of-installments" class="form-control" onchange="updateOfferPreview()">
+                  <option value="">—</option>
+                  <option value="1">1</option><option value="2">2</option>
+                  <option value="3">3</option><option value="4">4</option>
+                  <option value="5">5</option><option value="6">6</option>
+                  <option value="7">7</option><option value="8">8</option>
+                  <option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div id="offer-preview-content">
+                <div class="empty-state" style="padding:16px;"><div class="empty-desc">Fill fields above to preview earnings.</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="background:var(--bg-input);">
+            <div class="card-title" style="margin-bottom:12px; font-size:14px;"><i class="fa-solid fa-file-contract text-cyan"></i>Contract Details</div>
+            <div class="detail-row"><span class="detail-label">Contract</span><span class="detail-value mono" style="font-size:10px;">0x4135…CF5F</span></div>
+            <div class="detail-row"><span class="detail-label">Max Rate</span><span class="detail-value text-green">5%/month</span></div>
+            <div class="detail-row"><span class="detail-label">Max Installments</span><span class="detail-value">10</span></div>
+            <div class="detail-row" style="border:none;"><span class="detail-label">Custody</span><span class="detail-value">Non-custodial</span></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ── Tab: Loan Requests ──────────────────────────────────────────────── -->
+    <!-- ── Tab: Loan Requests (on-chain) ─────────────────────────────────── -->
     <div id="lend-tab-loan-requests" style="display:none;">
       <div class="flex items-center justify-between mb-4">
         <div></div>
@@ -1284,10 +1234,19 @@ app.get('/', (c) => {
       </div>
       <!-- Filter Tabs -->
       <div class="tabs" style="margin-bottom:20px;">
-        <button class="tab-btn active" onclick="filterLenderLoans('all',this)">All Requests</button>
-        <button class="tab-btn" onclick="filterLenderLoans('PENDING',this)">Pending</button>
-        <button class="tab-btn" onclick="filterLenderLoans('ACTIVE',this)">Active</button>
-        <button class="tab-btn" onclick="filterLenderLoans('COMPLETED',this)">Completed</button>
+        <button class="tab-btn active" onclick="filterLenderLoans('all',this)">All</button>
+        <button class="tab-btn" onclick="filterLenderLoans('Requested',this)">
+          <i class="fa-solid fa-clock"></i> Requested
+        </button>
+        <button class="tab-btn" onclick="filterLenderLoans('Approved',this)">
+          <i class="fa-solid fa-check"></i> Approved
+        </button>
+        <button class="tab-btn" onclick="filterLenderLoans('Active',this)">
+          <i class="fa-solid fa-bolt"></i> Active
+        </button>
+        <button class="tab-btn" onclick="filterLenderLoans('Repaid',this)">
+          <i class="fa-solid fa-flag-checkered"></i> Repaid
+        </button>
       </div>
       <div class="card" style="padding:0;">
         <div class="table-container" style="border:none; border-radius:var(--radius-lg);">
@@ -1298,10 +1257,24 @@ app.get('/', (c) => {
               </tr>
             </thead>
             <tbody id="lender-loans-tbody">
-              <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🏦</div><div class="empty-title">No loans found</div><div class="empty-desc">Connect your wallet to view loan requests.</div></div></td></tr>
+              <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🏦</div><div class="empty-title">Loading loan requests…</div><div class="empty-desc">Switch to this tab to load on-chain data.</div></div></td></tr>
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Tab: My Lending (redirects to dedicated page) ───────────────── -->
+    <div id="lend-tab-my-lending" style="display:none;">
+      <div style="padding:48px 24px; text-align:center;">
+        <div style="font-size:48px; margin-bottom:16px;">🏦</div>
+        <div class="section-title" style="margin-bottom:8px;">My Lending Dashboard</div>
+        <div class="section-sub" style="max-width:400px; margin:0 auto 24px;">
+          View all loans you've funded, repayment progress, and your earnings on Arc Testnet.
+        </div>
+        <button class="btn btn-primary" onclick="showPage('my-lending')">
+          <i class="fa-solid fa-arrow-right"></i> Go to My Lending
+        </button>
       </div>
     </div>
   </div>
