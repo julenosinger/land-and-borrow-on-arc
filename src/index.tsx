@@ -1083,28 +1083,19 @@ app.get('/', (c) => {
             </div>
           </div>
 
-          <!-- Document upload -->
+          <!-- Document upload — up to 5 files -->
           <div class="bw-card">
-            <div class="bw-card-eyebrow"><i class="fa-solid fa-upload"></i> Ownership document <span class="bw-req">*</span></div>
-            <p class="bw-card-hint">Upload a notarized PDF, JPG or PNG. The file is hashed (SHA-256) and optionally pinned to IPFS. Only the hash is stored on-chain — the original file is never public.</p>
+            <div class="bw-card-eyebrow"><i class="fa-solid fa-upload"></i> Collateral documents <span class="bw-req">*</span></div>
+            <p class="bw-card-hint">Upload up to 5 files (PDF, JPG, PNG, WEBP). Each file is hashed (SHA-256) and optionally pinned to IPFS. Only hashes are stored on-chain — original files are never public.</p>
 
-            <div class="bw-upload-zone" id="rwa-upload-zone">
-              <input type="file" id="rwa-doc-file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleDocUpload(this)" />
-              <div class="bw-upload-icon">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-              </div>
-              <div class="bw-upload-main">Drop file here or <span class="bw-upload-browse">browse</span></div>
-              <div class="bw-upload-sub">PDF, JPG, PNG · Max 10 MB · Notarized document required</div>
-            </div>
+            <!-- Slot list rendered by JS -->
+            <div id="rwa-docs-list" class="bw-docs-list"></div>
 
-            <div id="rwa-doc-info" class="bw-doc-info" style="display:none;">
-              <div class="bw-doc-info-icon">📎</div>
-              <div class="bw-doc-info-body">
-                <div id="rwa-doc-name" class="bw-doc-name"></div>
-                <div id="rwa-doc-hash" class="bw-doc-hash"></div>
-              </div>
-              <span class="bw-doc-badge"><i class="fa-solid fa-check"></i> Hash computed</span>
-            </div>
+            <!-- Add document button (hidden once 5 docs added) -->
+            <button type="button" id="rwa-add-doc-btn" class="bw-add-doc-btn" onclick="addDocSlot()">
+              <i class="fa-solid fa-plus"></i> Add Document
+            </button>
+
             <span class="bw-field-err" id="rwa-doc-err"></span>
           </div>
 

@@ -292,6 +292,7 @@ class Web3Manager {
       jurisdiction: collateralData.jurisdiction || '',
       docHash:      collateralData.documentHash || '',
       docURI:       collateralData.documentURI  || '',
+      docs:         collateralData.docs          || [],   // multi-doc array [{label,hash,uri,status}]
       borrower: {
         name:       borrowerInfo.fullName,
         email:      borrowerInfo.email,
@@ -612,6 +613,12 @@ class Web3Manager {
         jurisdiction:      colData.jurisdiction   || '',
         documentHash:      colData.docHash        || '',
         documentURI:       colData.docURI         || '',
+        // Multi-doc array (new loans); fallback to single-doc for legacy loans
+        docs:              Array.isArray(colData.docs) && colData.docs.length > 0
+                             ? colData.docs
+                             : (colData.docHash || colData.docURI
+                                 ? [{ label: 'Collateral Document', hash: colData.docHash || '', uri: colData.docURI || '', status: colData.docURI?.startsWith('ipfs://') ? 'ipfs' : 'local' }]
+                                 : []),
         // Crypto fields
         cryptoToken:       colData.token          || '',
         cryptoAmount:      colData.amount         || '0',

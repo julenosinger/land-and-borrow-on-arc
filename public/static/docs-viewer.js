@@ -1,21 +1,16 @@
 /**
  * DaatFI — Borrower Documents Viewer
  * ─────────────────────────────────────────────────────────────────────────────
- * Strictly additive module. Zero impact on existing features.
- *
  * Public API:
- *   DOCS.open(loanId, col)   → show legal gate, then document viewer
+ *   DOCS.open(loanId, col)   → show legal gate (session-scoped), then viewer
  *
- * Legal gate is session-scoped: once accepted, no further prompts until
- * the browser tab is closed (sessionStorage key: daatfi-docs-consent).
- *
- * Supported formats: IPFS images (JPG/PNG/WEBP) and PDFs, plus any direct URL.
+ * Supports up to 5 documents with tab navigation.
+ * Formats: IPFS images (JPG/PNG/WEBP), PDFs, local-hash only.
  */
 
 ;(function (global) {
   'use strict';
 
-  // ── Session consent key ────────────────────────────────────────────────────
   const CONSENT_KEY = 'daatfi-docs-consent';
 
   // ── Resolve IPFS URI → accessible HTTP URL ─────────────────────────────────
@@ -25,47 +20,49 @@
       const cid = uri.replace('ipfs://', '').replace(/^0x/, '');
       return `https://gateway.pinata.cloud/ipfs/${cid}`;
     }
-    if (uri.startsWith('file://')) return null;   // local only, no public link
+    if (uri.startsWith('file://')) return null;
     return uri;
   }
 
-  // ── Detect file type from URL / CID ────────────────────────────────────────
+  // ── Detect file type ────────────────────────────────────────────────────────
   function _fileType(url) {
     if (!url) return 'unknown';
     const u = url.toLowerCase().split('?')[0];
     if (/\.(jpg|jpeg|png|webp|gif)$/.test(u)) return 'image';
     if (/\.pdf$/.test(u)) return 'pdf';
-    // IPFS CIDs have no extension — try to detect from the metadata we have
-    // Default to pdf for IPFS documents (most uploaded collateral docs are PDFs)
-    if (url.includes('gateway.pinata.cloud') || url.includes('ipfs')) return 'ipfs-auto';
+    if (url.includes('gateway.pinata.cloud') || url.includes('/ipfs/')) return 'ipfs-auto';
     return 'unknown';
   }
 
-  // ── Z-index layer for stacked modals ────────────────────────────────────────
   const Z_GATE   = 10000;
   const Z_VIEWER = 10001;
 
-  // ── Inject scoped CSS once ─────────────────────────────────────────────────
+  // ── HTML escape ────────────────────────────────────────────────────────────
+  function _esc(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ── CSS injection ──────────────────────────────────────────────────────────
   function _injectCSS() {
     if (document.getElementById('dv-style')) return;
     const s = document.createElement('style');
     s.id = 'dv-style';
     s.textContent = `
-      /* ── Docs Viewer overlay ── */
       .dv-overlay {
         position: fixed; inset: 0;
         display: flex; align-items: center; justify-content: center;
         padding: 16px;
-        background: rgba(2,6,23,0.85);
+        background: rgba(2,6,23,0.88);
         backdrop-filter: blur(6px);
         animation: dv-fadein 0.18s ease;
+        z-index: ${Z_VIEWER};
       }
       @keyframes dv-fadein { from { opacity:0 } to { opacity:1 } }
 
       /* ── Gate modal ── */
       .dv-gate {
-        position: relative;
-        width: 100%; max-width: 520px;
+        position: relative; width: 100%; max-width: 520px;
         background: var(--bg-card, #1e293b);
         border: 1px solid var(--border, #334155);
         border-radius: 20px;
@@ -74,71 +71,34 @@
         animation: dv-slidein 0.22s cubic-bezier(.16,1,.3,1);
       }
       @keyframes dv-slidein { from { transform:translateY(20px);opacity:0 } to { transform:translateY(0);opacity:1 } }
-
       .dv-gate-header {
         padding: 22px 24px 16px;
         border-bottom: 1px solid var(--border, #334155);
         display: flex; align-items: flex-start; gap: 14px;
       }
-      .dv-gate-icon {
-        width: 42px; height: 42px; flex-shrink: 0;
-        background: rgba(245,158,11,0.12);
-        border: 1px solid rgba(245,158,11,0.3);
-        border-radius: 10px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 20px;
-      }
-      .dv-gate-title {
-        font-size: 16px; font-weight: 700;
-        color: var(--text-primary, #f1f5f9);
-        margin-bottom: 3px;
-      }
-      .dv-gate-subtitle {
-        font-size: 12px;
-        color: var(--text-muted, #64748b);
-      }
+      .dv-gate-icon { font-size: 28px; flex-shrink: 0; }
+      .dv-gate-title { font-size: 17px; font-weight: 700; color: var(--text-primary, #f1f5f9); line-height: 1.3; }
+      .dv-gate-subtitle { font-size: 12px; color: var(--text-muted, #64748b); margin-top: 4px; }
       .dv-gate-body { padding: 20px 24px; }
       .dv-gate-text {
-        font-size: 13px; line-height: 1.7;
-        color: var(--text-secondary, #94a3b8);
-        background: rgba(245,158,11,0.05);
-        border: 1px solid rgba(245,158,11,0.15);
-        border-radius: 10px;
-        padding: 14px 16px;
-        margin-bottom: 18px;
+        font-size: 13px; line-height: 1.7; color: var(--text-secondary, #94a3b8);
+        background: rgba(6,182,212,0.04); border: 1px solid rgba(6,182,212,0.12);
+        border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;
       }
       .dv-gate-checkbox-row {
-        display: flex; align-items: flex-start; gap: 12px;
-        padding: 14px 16px;
-        background: var(--bg-input, #0f172a);
-        border: 1px solid var(--border, #334155);
-        border-radius: 10px;
-        cursor: pointer;
-        transition: border-color 0.15s;
-        margin-bottom: 4px;
+        display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+        font-size: 13px; color: var(--text-primary, #f1f5f9); line-height: 1.5;
       }
-      .dv-gate-checkbox-row:hover { border-color: var(--cyan, #06b6d4); }
-      .dv-gate-checkbox-row input[type=checkbox] {
-        width: 18px; height: 18px; flex-shrink: 0; cursor: pointer;
-        accent-color: var(--cyan, #06b6d4);
-        margin-top: 1px;
-      }
-      .dv-gate-checkbox-label {
-        font-size: 13px; font-weight: 500;
-        color: var(--text-primary, #f1f5f9);
-        line-height: 1.5; cursor: pointer;
-      }
+      .dv-gate-checkbox-row input[type="checkbox"] { margin-top: 2px; accent-color: var(--cyan, #06b6d4); flex-shrink: 0; }
       .dv-gate-footer {
-        padding: 16px 24px 20px;
-        display: flex; justify-content: flex-end; gap: 10px;
+        padding: 16px 24px;
         border-top: 1px solid var(--border, #334155);
+        display: flex; gap: 10px; justify-content: flex-end;
       }
 
       /* ── Viewer modal ── */
       .dv-viewer {
-        position: relative;
-        width: 100%; max-width: 960px;
-        max-height: calc(100vh - 40px);
+        position: relative; width: 100%; max-width: 880px; max-height: 92vh;
         background: var(--bg-card, #1e293b);
         border: 1px solid var(--border, #334155);
         border-radius: 20px;
@@ -148,204 +108,199 @@
         animation: dv-slidein 0.22s cubic-bezier(.16,1,.3,1);
       }
       .dv-viewer-header {
-        padding: 18px 22px;
+        display: flex; align-items: center; gap: 12px;
+        padding: 16px 20px; flex-shrink: 0;
         border-bottom: 1px solid var(--border, #334155);
-        display: flex; align-items: center; gap: 14px;
-        flex-shrink: 0;
       }
-      .dv-viewer-icon {
-        width: 36px; height: 36px; flex-shrink: 0;
-        background: rgba(6,182,212,0.12);
-        border: 1px solid rgba(6,182,212,0.3);
-        border-radius: 8px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 16px; color: var(--cyan, #06b6d4);
-      }
-      .dv-viewer-title {
-        font-size: 15px; font-weight: 700;
-        color: var(--text-primary, #f1f5f9);
-        flex: 1;
-      }
-      .dv-viewer-subtitle {
-        font-size: 11px;
-        color: var(--text-muted, #64748b);
-      }
+      .dv-viewer-icon { font-size: 22px; flex-shrink: 0; }
+      .dv-viewer-title { font-size: 16px; font-weight: 700; color: var(--text-primary, #f1f5f9); }
+      .dv-viewer-subtitle { font-size: 11px; color: var(--text-muted, #64748b); margin-top: 2px; }
       .dv-viewer-close {
-        width: 32px; height: 32px; border-radius: 8px;
-        background: transparent; border: none; cursor: pointer;
-        color: var(--text-muted, #64748b);
-        display: flex; align-items: center; justify-content: center;
-        transition: background 0.15s, color 0.15s;
+        background: none; border: 1px solid var(--border, #334155); border-radius: 8px;
+        width: 32px; height: 32px; cursor: pointer; color: var(--text-secondary, #94a3b8);
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        transition: border-color 0.2s, color 0.2s;
       }
-      .dv-viewer-close:hover {
-        background: rgba(239,68,68,0.12); color: #ef4444;
-      }
+      .dv-viewer-close:hover { border-color: var(--red, #ef4444); color: var(--red, #ef4444); }
 
-      .dv-viewer-toolbar {
-        padding: 10px 22px;
+      /* ── Document tabs ── */
+      .dv-doc-tabs {
+        display: flex; gap: 4px; padding: 10px 16px 0;
         border-bottom: 1px solid var(--border, #334155);
+        flex-shrink: 0; overflow-x: auto;
+        scrollbar-width: thin;
+      }
+      .dv-doc-tab {
+        padding: 7px 14px; border-radius: 8px 8px 0 0;
+        font-size: 12px; font-weight: 600;
+        cursor: pointer; transition: background 0.15s, color 0.15s;
+        background: transparent; border: 1px solid transparent; border-bottom: none;
+        color: var(--text-muted, #64748b);
+        white-space: nowrap; user-select: none;
+        display: flex; align-items: center; gap: 6px;
+      }
+      .dv-doc-tab:hover { background: rgba(255,255,255,0.05); color: var(--text-primary, #f1f5f9); }
+      .dv-doc-tab.active {
+        background: var(--bg-input, rgba(255,255,255,0.06));
+        border-color: var(--border, #334155);
+        color: var(--cyan, #06b6d4);
+      }
+      .dv-doc-tab-dot {
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      }
+      .dv-doc-tab-dot.ipfs  { background: var(--green, #10b981); }
+      .dv-doc-tab-dot.local { background: var(--amber, #f59e0b); }
+      .dv-doc-tab-dot.empty { background: var(--text-muted, #64748b); }
+
+      /* ── Toolbar ── */
+      .dv-viewer-toolbar {
         display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-        background: var(--bg-input, #0f172a);
-        flex-shrink: 0;
+        padding: 10px 16px; flex-shrink: 0;
+        border-bottom: 1px solid var(--border, #334155);
+        background: rgba(0,0,0,0.15);
       }
       .dv-tool-badge {
         display: inline-flex; align-items: center; gap: 5px;
-        padding: 4px 10px;
-        background: rgba(6,182,212,0.08);
-        border: 1px solid rgba(6,182,212,0.2);
-        border-radius: 6px;
-        font-size: 11px; font-weight: 600;
-        color: var(--cyan, #06b6d4);
+        padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+        background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2);
+        color: var(--cyan, #06b6d4); white-space: nowrap;
       }
       .dv-tool-sep { flex: 1; }
       .dv-tool-btn {
         display: inline-flex; align-items: center; gap: 6px;
-        padding: 6px 12px; border-radius: 8px; cursor: pointer;
-        font-size: 12px; font-weight: 600; border: none;
-        transition: background 0.15s, color 0.15s;
-        text-decoration: none;
+        padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+        cursor: pointer; transition: opacity 0.15s, transform 0.15s; text-decoration: none;
+        white-space: nowrap;
       }
-      .dv-tool-btn-secondary {
-        background: var(--bg-card, #1e293b);
-        border: 1px solid var(--border, #334155);
-        color: var(--text-secondary, #94a3b8);
-      }
-      .dv-tool-btn-secondary:hover {
-        border-color: var(--cyan, #06b6d4);
-        color: var(--cyan, #06b6d4);
-      }
-      .dv-tool-btn-primary {
-        background: rgba(6,182,212,0.12);
-        border: 1px solid rgba(6,182,212,0.3);
-        color: var(--cyan, #06b6d4);
-      }
-      .dv-tool-btn-primary:hover { background: rgba(6,182,212,0.22); }
+      .dv-tool-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+      .dv-tool-btn-primary  { background: linear-gradient(135deg,#06b6d4,#3b82f6); color:#fff; border: none; }
+      .dv-tool-btn-secondary { background: transparent; border: 1px solid var(--border,#334155); color: var(--text-secondary,#94a3b8); }
+      .dv-tool-btn-secondary:hover { border-color: var(--cyan,#06b6d4); color: var(--cyan,#06b6d4); }
 
       /* ── Preview area ── */
       .dv-preview-area {
-        flex: 1; overflow: auto;
+        flex: 1; overflow: auto; position: relative;
+        background: rgba(0,0,0,0.2);
         display: flex; align-items: center; justify-content: center;
-        padding: 24px; min-height: 300px;
-        background: var(--bg-input, #0f172a);
+        min-height: 320px;
       }
       .dv-preview-img {
-        max-width: 100%; max-height: 60vh;
-        border-radius: 8px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.5);
-        cursor: zoom-in;
-        transition: transform 0.2s;
+        max-width: 100%; max-height: 100%;
+        object-fit: contain; cursor: zoom-in;
+        transition: transform 0.25s ease;
       }
-      .dv-preview-img.zoomed {
-        max-width: none; max-height: none;
-        cursor: zoom-out;
-        transform: scale(1);
-      }
+      .dv-preview-img.zoomed { transform: scale(1.8); cursor: zoom-out; }
       .dv-preview-pdf {
-        width: 100%; height: 60vh; min-height: 400px;
-        border: none; border-radius: 8px;
-      }
-      .dv-preview-unknown {
-        text-align: center; padding: 40px 24px;
-      }
-      .dv-preview-unknown-icon { font-size: 48px; margin-bottom: 12px; }
-      .dv-preview-unknown-text {
-        font-size: 14px; color: var(--text-secondary, #94a3b8);
-        margin-bottom: 16px;
+        width: 100%; height: 100%; min-height: 420px;
+        border: none; background: #fff; display: block;
       }
 
-      /* ── No documents state ── */
+      /* ── Empty / local state ── */
       .dv-empty {
-        padding: 48px 24px; text-align: center;
+        padding: 32px 24px; text-align: center; width: 100%;
+        color: var(--text-secondary, #94a3b8); font-size: 14px; line-height: 1.7;
       }
-      .dv-empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
-      .dv-empty-text { font-size: 14px; color: var(--text-muted, #64748b); }
+      .dv-empty-icon { font-size: 40px; margin-bottom: 12px; }
+      .dv-empty-text { max-width: 500px; margin: 0 auto; }
 
-      /* ── Consent badge in viewer ── */
+      /* ── Consent footer ── */
       .dv-consent-badge {
-        padding: 8px 22px;
-        background: rgba(16,185,129,0.06);
-        border-top: 1px solid rgba(16,185,129,0.15);
-        display: flex; align-items: center; gap: 8px;
-        font-size: 11px; color: #10b981; flex-shrink: 0;
+        padding: 10px 16px; flex-shrink: 0;
+        border-top: 1px solid var(--border, #334155);
+        font-size: 11px; color: var(--text-muted, #64748b);
+        display: flex; align-items: center; gap: 6px;
       }
+      .dv-consent-badge i { color: var(--green, #10b981); }
 
-      /* ── Responsive ── */
-      @media (max-width: 600px) {
-        .dv-gate { max-width: 100%; border-radius: 16px; }
-        .dv-viewer { border-radius: 16px; }
-        .dv-viewer-toolbar { padding: 8px 14px; }
-        .dv-preview-area { padding: 12px; }
-        .dv-preview-pdf { height: 50vh; }
-      }
-
-      /* ── Light mode overrides ── */
+      /* ── Light mode ── */
+      html.light .dv-overlay { background: rgba(15,23,42,0.7); }
       html.light .dv-gate,
-      html.light .dv-viewer {
-        background: #ffffff;
-        border-color: #cbd5e1;
-      }
-      html.light .dv-gate-text { background: rgba(245,158,11,0.04); }
-      html.light .dv-gate-checkbox-row { background: #f1f5f9; }
-      html.light .dv-viewer-toolbar { background: #f1f5f9; }
-      html.light .dv-preview-area { background: #f8faff; }
-      html.light .dv-tool-btn-secondary {
-        background: #ffffff; border-color: #cbd5e1; color: #475569;
+      html.light .dv-viewer { background: #ffffff; border-color: #e2e8f0; }
+      html.light .dv-gate-header,
+      html.light .dv-viewer-header,
+      html.light .dv-viewer-toolbar,
+      html.light .dv-doc-tabs,
+      html.light .dv-gate-footer,
+      html.light .dv-consent-badge { border-color: #e2e8f0; }
+      html.light .dv-gate-text { background: rgba(6,182,212,0.03); }
+      html.light .dv-preview-area { background: #f1f5f9; }
+      html.light .dv-viewer-toolbar { background: rgba(0,0,0,0.03); }
+      html.light .dv-doc-tab:hover { background: rgba(0,0,0,0.04); }
+      html.light .dv-doc-tab.active { background: #fff; }
+
+      @media (max-width: 640px) {
+        .dv-viewer { max-height: 100vh; border-radius: 16px 16px 0 0; }
+        .dv-viewer-header { padding: 12px 14px; }
+        .dv-viewer-toolbar { padding: 8px 10px; }
+        .dv-doc-tabs { padding: 6px 10px 0; }
       }
     `;
     document.head.appendChild(s);
   }
 
-  // ── Utility: close overlay with fade-out ───────────────────────────────────
+  // ── Close overlay ─────────────────────────────────────────────────────────
   function _closeOverlay(el) {
+    if (!el) return;
     el.style.animation = 'dv-fadein 0.15s ease reverse forwards';
     setTimeout(() => { el?.remove(); }, 150);
   }
 
-  // ── Build preview content based on file type ───────────────────────────────
-  function _buildPreview(url, type) {
+  // ── Build preview content for a single doc ────────────────────────────────
+  function _buildPreview(url, type, rawUri, hash) {
+    const isFileUri = rawUri?.startsWith('file://');
+
+    if (!url && isFileUri) {
+      const origName = rawUri.replace('file://', '');
+      return `
+        <div class="dv-empty">
+          <div class="dv-empty-icon">📋</div>
+          <div class="dv-empty-text">
+            <strong style="color:var(--text-primary,#f1f5f9);display:block;margin-bottom:10px;font-size:15px;">
+              Document not available online
+            </strong>
+            This document was uploaded without IPFS at submission time.<br>
+            The file hash is stored on-chain for integrity verification.
+            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px 16px;margin-top:14px;text-align:left;">
+              <div style="font-size:11px;color:var(--text-muted,#64748b);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Original filename</div>
+              <div style="font-family:monospace;font-size:13px;color:var(--amber,#f59e0b);word-break:break-all;">${_esc(origName)}</div>
+              ${hash ? `
+              <div style="font-size:11px;color:var(--text-muted,#64748b);margin-top:10px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">SHA-256 on-chain hash</div>
+              <div style="font-family:monospace;font-size:11px;color:var(--text-secondary,#94a3b8);word-break:break-all;">${_esc(hash)}</div>` : ''}
+            </div>
+            <div style="margin-top:14px;font-size:12px;color:var(--text-muted,#64748b);">
+              <i class="fa-solid fa-circle-info" style="color:var(--cyan,#06b6d4);margin-right:4px;"></i>
+              To make this document viewable, ask the borrower to re-submit with IPFS enabled (Pinata configured).
+            </div>
+          </div>
+        </div>`;
+    }
+
     if (!url) {
-      return `<div class="dv-preview-unknown">
-        <div class="dv-preview-unknown-icon">🔒</div>
-        <div class="dv-preview-unknown-text">
-          This document was submitted without an IPFS link.<br>
-          The SHA-256 hash is stored on-chain for verification.
-        </div>
-      </div>`;
+      return `
+        <div class="dv-empty">
+          <div class="dv-empty-icon">📂</div>
+          <div class="dv-empty-text">
+            No document file was attached to this entry.<br>
+            ${hash ? `<span style="font-size:11px;color:var(--text-muted);">SHA-256: <span style="font-family:monospace;word-break:break-all;">${_esc(hash)}</span></span>` : 'No document hash or file was provided.'}
+          </div>
+        </div>`;
     }
 
     if (type === 'image') {
-      return `<img
-        src="${url}"
-        class="dv-preview-img"
-        alt="Borrower document"
-        loading="lazy"
-        onclick="this.classList.toggle('zoomed')"
-        title="Click to zoom in / out"
-      />`;
+      return `<img src="${url}" class="dv-preview-img" alt="Borrower document" loading="lazy" title="Click to zoom in / out" />`;
     }
 
     if (type === 'pdf') {
-      return `<iframe
-        src="${url}#toolbar=0&navpanes=0&scrollbar=1"
-        class="dv-preview-pdf"
-        sandbox="allow-same-origin allow-scripts"
-        title="Borrower document PDF"
-      ></iframe>`;
+      return `<iframe src="${url}#toolbar=0&navpanes=0&scrollbar=1" class="dv-preview-pdf" sandbox="allow-same-origin allow-scripts" title="Borrower document PDF"></iframe>`;
     }
 
-    // ipfs-auto or unknown — try iframe first (works for PDFs and images from IPFS)
+    // ipfs-auto or unknown
     return `
-      <div style="width:100%; display:flex; flex-direction:column; gap:12px; align-items:center;">
-        <iframe
-          src="${url}"
-          class="dv-preview-pdf"
-          sandbox="allow-same-origin allow-scripts"
-          title="Borrower document"
-          onload="this.style.display='block'"
-        ></iframe>
-        <div style="font-size:11px; color:var(--text-muted,#64748b); text-align:center;">
+      <div style="width:100%;display:flex;flex-direction:column;gap:12px;align-items:center;">
+        <iframe src="${url}" class="dv-preview-pdf" sandbox="allow-same-origin allow-scripts" title="Borrower document"></iframe>
+        <div style="font-size:11px;color:var(--text-muted,#64748b);text-align:center;padding:0 16px;">
           <i class="fa-solid fa-circle-info" style="margin-right:4px;"></i>
-          If the preview is blank, use "Open in New Tab" to view the document.
+          If the preview appears blank, use "Open in New Tab" to view the document.
         </div>
       </div>`;
   }
@@ -353,43 +308,35 @@
   // ── Show the legal gate modal ──────────────────────────────────────────────
   function _showGate(onAccepted) {
     _injectCSS();
-
     const overlay = document.createElement('div');
     overlay.className = 'dv-overlay';
     overlay.style.zIndex = Z_GATE;
 
     overlay.innerHTML = `
-      <div class="dv-gate" role="dialog" aria-modal="true"
-           aria-labelledby="dv-gate-title">
+      <div class="dv-gate" role="dialog" aria-modal="true" aria-labelledby="dv-gate-title">
         <div class="dv-gate-header">
           <div class="dv-gate-icon">⚖️</div>
           <div>
-            <div class="dv-gate-title" id="dv-gate-title">
-              Legal Agreement – Data Protection and Privacy
-            </div>
+            <div class="dv-gate-title" id="dv-gate-title">Legal Agreement – Data Protection and Privacy</div>
             <div class="dv-gate-subtitle">You must accept before viewing any documents</div>
           </div>
         </div>
         <div class="dv-gate-body">
           <div class="dv-gate-text">
-            By accessing these documents, you agree that you will not misuse,
-            distribute, or process any personal data in violation of applicable
-            data protection laws. You acknowledge full responsibility for
-            compliance with all relevant privacy and data protection regulations.
+            By accessing these documents, you agree that you will not misuse, distribute,
+            or process any personal data in violation of applicable data protection laws.
+            You acknowledge full responsibility for compliance with all relevant privacy
+            and data protection regulations. Documents are provided solely for loan
+            evaluation purposes and must not be stored, shared, or used for any other purpose.
           </div>
           <label class="dv-gate-checkbox-row" for="dv-consent-cb">
             <input type="checkbox" id="dv-consent-cb" />
-            <span class="dv-gate-checkbox-label">
-              I agree to the terms and accept full legal responsibility
-            </span>
+            <span>I agree to the terms and accept full legal responsibility for the lawful use of these documents.</span>
           </label>
         </div>
         <div class="dv-gate-footer">
-          <button id="dv-gate-cancel" class="dv-tool-btn dv-tool-btn-secondary">
-            Cancel
-          </button>
-          <button id="dv-gate-continue" class="dv-tool-btn dv-tool-btn-primary"
-                  disabled style="opacity:0.45; cursor:not-allowed;">
+          <button id="dv-gate-cancel" class="dv-tool-btn dv-tool-btn-secondary">Cancel</button>
+          <button id="dv-gate-continue" class="dv-tool-btn dv-tool-btn-primary" disabled style="opacity:0.45;cursor:not-allowed;">
             <i class="fa-solid fa-shield-halved"></i> Continue
           </button>
         </div>
@@ -402,158 +349,160 @@
     const contBtn = overlay.querySelector('#dv-gate-continue');
     const cancelBtn = overlay.querySelector('#dv-gate-cancel');
 
-    // Enable / disable Continue based on checkbox
     cb.addEventListener('change', () => {
-      const checked = cb.checked;
-      contBtn.disabled = !checked;
-      contBtn.style.opacity    = checked ? '1'     : '0.45';
-      contBtn.style.cursor     = checked ? 'pointer': 'not-allowed';
+      contBtn.disabled = !cb.checked;
+      contBtn.style.opacity = cb.checked ? '1' : '0.45';
+      contBtn.style.cursor  = cb.checked ? 'pointer' : 'not-allowed';
     });
-
     contBtn.addEventListener('click', () => {
       if (!cb.checked) return;
-      // Persist consent for this session
       try { sessionStorage.setItem(CONSENT_KEY, '1'); } catch {}
       _closeOverlay(overlay);
       onAccepted();
     });
-
     cancelBtn.addEventListener('click', () => _closeOverlay(overlay));
+  }
 
-    // Block click-outside to close (legal gate must be explicit)
-    // (No backdrop click handler intentionally)
+  // ── Build the full docs array from col object ──────────────────────────────
+  function _buildDocsArray(col) {
+    // New format: col.docs array
+    if (Array.isArray(col.docs) && col.docs.length > 0) {
+      return col.docs.map(d => ({
+        label:  d.label || 'Document',
+        hash:   d.hash  || '',
+        uri:    d.uri   || '',
+        status: d.status || (d.uri?.startsWith('ipfs://') ? 'ipfs' : d.uri ? 'local' : 'empty')
+      }));
+    }
+    // Legacy format: single documentURI / documentHash
+    const legacyUri  = col.documentURI  || col.docURI  || '';
+    const legacyHash = col.documentHash || col.docHash || '';
+    if (legacyUri || legacyHash) {
+      return [{
+        label:  'Collateral Document',
+        hash:   legacyHash,
+        uri:    legacyUri,
+        status: legacyUri.startsWith('ipfs://') ? 'ipfs' : legacyUri ? 'local' : 'empty'
+      }];
+    }
+    return [];
   }
 
   // ── Show the document viewer ───────────────────────────────────────────────
   function _showViewer(loanId, col) {
     _injectCSS();
 
-    const rawURI   = col.documentURI || col.docURI || '';
-    const isFileURI = rawURI.startsWith('file://');
-    const docUrl   = _resolveUrl(rawURI);
-    const type     = _fileType(docUrl);
-    const hash     = col.documentHash || col.docHash || '';
-    const hasDoc   = !!docUrl;
-
-    const filename = `DaatFI-Loan${loanId}-CollateralDoc`;
+    const docs = _buildDocsArray(col);
+    let activeIdx = 0;
 
     const overlay = document.createElement('div');
     overlay.className = 'dv-overlay';
     overlay.style.zIndex = Z_VIEWER;
 
-    // Determine preview area content
-    let previewContent;
-    if (hasDoc) {
-      previewContent = _buildPreview(docUrl, type);
-    } else if (isFileURI) {
-      // Document was uploaded locally (no Pinata) — hash stored on-chain, file not accessible
-      const origName = rawURI.replace('file://', '');
-      previewContent = `
-        <div class="dv-empty">
-          <div class="dv-empty-icon">📋</div>
-          <div class="dv-empty-text" style="max-width:480px; margin:0 auto;">
-            <strong style="color:var(--text-primary,#f1f5f9); display:block; margin-bottom:10px; font-size:15px;">
-              Document stored locally — not available online
-            </strong>
-            The borrower uploaded this document from their device.<br>
-            The file was <strong>not</strong> uploaded to IPFS at submission time.<br><br>
-            <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:10px; padding:14px 16px; margin-top:12px; text-align:left;">
-              <div style="font-size:11px; color:var(--text-muted,#64748b); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Original filename</div>
-              <div style="font-family:monospace; font-size:13px; color:var(--amber,#f59e0b); word-break:break-all;">${_esc(origName)}</div>
-              ${hash ? `
-              <div style="font-size:11px; color:var(--text-muted,#64748b); margin-top:10px; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">SHA-256 on-chain hash</div>
-              <div style="font-family:monospace; font-size:11px; color:var(--text-secondary,#94a3b8); word-break:break-all;">${hash}</div>` : ''}
-            </div>
-            <div style="margin-top:14px; font-size:12px; color:var(--text-muted,#64748b);">
-              <i class="fa-solid fa-circle-info" style="color:var(--cyan,#06b6d4); margin-right:4px;"></i>
-              Request the borrower to re-submit the loan with IPFS enabled (Pinata configured),
-              or ask them to share the document via a secure channel for physical verification.
-            </div>
-          </div>
-        </div>`;
-    } else {
-      previewContent = `
-        <div class="dv-empty">
-          <div class="dv-empty-icon">📂</div>
-          <div class="dv-empty-text">
-            No collateral document was submitted with this loan request.<br>
-            ${hash
-              ? `<span style="font-size:11px;color:var(--text-muted);">
-                  SHA-256 on-chain hash: <span style="font-family:monospace; word-break:break-all;">${hash}</span>
-                </span>`
-              : 'No document hash or file was attached.'}
-          </div>
-        </div>`;
+    // ── Render active doc ────────────────────────────────────────────────────
+    function _renderDoc(idx) {
+      const doc     = docs[idx];
+      const rawUri  = doc?.uri  || '';
+      const hash    = doc?.hash || '';
+      const docUrl  = _resolveUrl(rawUri);
+      const type    = _fileType(docUrl);
+      const hasDoc  = !!docUrl;
+      const isIPFS  = doc?.status === 'ipfs';
+      const filename = `DaatFI-Loan${loanId}-Doc${idx+1}`;
+
+      // Update tabs active state
+      overlay.querySelectorAll('.dv-doc-tab').forEach((t, ti) => {
+        t.classList.toggle('active', ti === idx);
+      });
+
+      // Update toolbar
+      const toolbar = overlay.querySelector('#dv-toolbar');
+      toolbar.innerHTML = `
+        <span class="dv-tool-badge">
+          <i class="fa-solid fa-shield-halved"></i> Consent Verified
+        </span>
+        ${hash ? `<span class="dv-tool-badge" style="background:rgba(139,92,246,0.08);border-color:rgba(139,92,246,0.25);color:var(--purple,#8b5cf6);">
+          <i class="fa-solid fa-fingerprint"></i> SHA-256: ${hash.slice(0,14)}…
+        </span>` : ''}
+        ${isIPFS ? `<span class="dv-tool-badge" style="background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.25);color:var(--green,#10b981);">
+          <i class="fa-solid fa-cloud"></i> IPFS
+        </span>` : rawUri.startsWith('file://') ? `<span class="dv-tool-badge" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);color:var(--amber,#f59e0b);">
+          <i class="fa-solid fa-triangle-exclamation"></i> Local hash only
+        </span>` : ''}
+        <span class="dv-tool-sep"></span>
+        ${hasDoc ? `
+          <button class="dv-tool-btn dv-tool-btn-secondary" id="dv-btn-newtab" title="Open in new tab">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+          </button>
+          <a class="dv-tool-btn dv-tool-btn-primary" id="dv-btn-download" href="${docUrl}" download="${filename}" title="Download">
+            <i class="fa-solid fa-download"></i> Download
+          </a>
+        ` : ''}
+      `;
+
+      // Update preview
+      const previewArea = overlay.querySelector('#dv-preview-area');
+      previewArea.innerHTML = _buildPreview(docUrl, type, rawUri, hash);
+
+      // Wire new-tab button
+      const newTabBtn = toolbar.querySelector('#dv-btn-newtab');
+      if (newTabBtn) {
+        newTabBtn.addEventListener('click', () => window.open(docUrl, '_blank', 'noopener,noreferrer'));
+      }
+
+      // Wire image zoom
+      const img = previewArea.querySelector('.dv-preview-img');
+      if (img) img.addEventListener('click', () => img.classList.toggle('zoomed'));
+    }
+
+    // ── Build tabs HTML ──────────────────────────────────────────────────────
+    function _buildTabsHtml() {
+      if (docs.length === 0) return '<div class="dv-doc-tabs"><span style="padding:8px 14px;font-size:12px;color:var(--text-muted);">No documents attached</span></div>';
+      return `<div class="dv-doc-tabs" id="dv-tabs">
+        ${docs.map((d, i) => `
+          <button class="dv-doc-tab${i === 0 ? ' active' : ''}" data-idx="${i}" title="${_esc(d.label)}">
+            <span class="dv-doc-tab-dot ${d.status === 'ipfs' ? 'ipfs' : d.status === 'local' ? 'local' : 'empty'}"></span>
+            ${_esc(d.label || `Doc ${i+1}`)}
+          </button>
+        `).join('')}
+      </div>`;
     }
 
     overlay.innerHTML = `
-      <div class="dv-viewer" role="dialog" aria-modal="true"
-           aria-labelledby="dv-viewer-title">
+      <div class="dv-viewer" role="dialog" aria-modal="true" aria-labelledby="dv-viewer-title">
 
         <!-- Header -->
         <div class="dv-viewer-header">
-          <div class="dv-viewer-icon">
-            <i class="fa-solid fa-folder-open"></i>
-          </div>
-          <div style="flex:1; min-width:0;">
-            <div class="dv-viewer-title" id="dv-viewer-title">
-              Borrower Documents — Loan #${loanId}
-            </div>
+          <div class="dv-viewer-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <div style="flex:1;min-width:0;">
+            <div class="dv-viewer-title" id="dv-viewer-title">Borrower Documents — Loan #${loanId}</div>
             <div class="dv-viewer-subtitle">
-              Collateral: ${col.colTypeLabel || 'RWA'}
-              ${col.assetType ? ' · ' + _esc(col.assetType) : ''}
-              ${isFileURI && !hasDoc ? ' · ⚠ Local file only' : ''}
-              ${hasDoc ? ' · ✓ IPFS verified' : ''}
+              ${col.colTypeLabel || 'RWA'}${col.assetType ? ' · ' + _esc(col.assetType) : ''}
+              · ${docs.length} document(s) · ${docs.filter(d=>d.status==='ipfs').length} on IPFS
             </div>
           </div>
-          <button class="dv-viewer-close" id="dv-close" aria-label="Close documents viewer">
+          <button class="dv-viewer-close" id="dv-close" aria-label="Close">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0
                 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293
-                4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clip-rule="evenodd"/>
+                4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
             </svg>
           </button>
         </div>
 
+        <!-- Document tabs -->
+        ${_buildTabsHtml()}
+
         <!-- Toolbar -->
-        <div class="dv-viewer-toolbar">
-          <span class="dv-tool-badge">
-            <i class="fa-solid fa-shield-halved"></i> Consent Verified
-          </span>
-          ${hash ? `<span class="dv-tool-badge" style="background:rgba(139,92,246,0.08);border-color:rgba(139,92,246,0.25);color:var(--purple,#8b5cf6);">
-            <i class="fa-solid fa-fingerprint"></i>
-            SHA-256: ${hash.slice(0,14)}…
-          </span>` : ''}
-          ${isFileURI && !hasDoc ? `<span class="dv-tool-badge" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);color:var(--amber,#f59e0b);">
-            <i class="fa-solid fa-triangle-exclamation"></i> No IPFS Link
-          </span>` : ''}
-          ${hasDoc ? `<span class="dv-tool-badge" style="background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.25);color:var(--green,#10b981);">
-            <i class="fa-solid fa-cloud"></i> IPFS
-          </span>` : ''}
-          <span class="dv-tool-sep"></span>
-          ${hasDoc ? `
-            <button class="dv-tool-btn dv-tool-btn-secondary" id="dv-btn-newtab"
-              title="Open in new tab (no auto-download)">
-              <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in New Tab
-            </button>
-            <a class="dv-tool-btn dv-tool-btn-primary" id="dv-btn-download"
-              href="${docUrl}" download="${filename}"
-              title="Download document">
-              <i class="fa-solid fa-download"></i> Download
-            </a>
-          ` : ''}
-        </div>
+        <div class="dv-viewer-toolbar" id="dv-toolbar"></div>
 
         <!-- Preview area -->
-        <div class="dv-preview-area" id="dv-preview-area">
-          ${previewContent}
-        </div>
+        <div class="dv-preview-area" id="dv-preview-area"></div>
 
-        <!-- Consent footer badge -->
+        <!-- Consent footer -->
         <div class="dv-consent-badge">
           <i class="fa-solid fa-circle-check"></i>
-          Legal agreement accepted this session — viewing is authorised under your declared compliance responsibility.
+          Legal agreement accepted this session — viewing authorised under your declared compliance responsibility.
         </div>
 
       </div>
@@ -561,63 +510,51 @@
 
     document.body.appendChild(overlay);
 
-    // Close button
+    // Wire close
     overlay.querySelector('#dv-close').addEventListener('click', () => _closeOverlay(overlay));
 
-    // Open in new tab (no download attribute)
-    const newTabBtn = overlay.querySelector('#dv-btn-newtab');
-    if (newTabBtn) {
-      newTabBtn.addEventListener('click', () => {
-        window.open(docUrl, '_blank', 'noopener,noreferrer');
-      });
-    }
+    // Wire tabs
+    overlay.querySelector('#dv-tabs')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.dv-doc-tab');
+      if (!btn) return;
+      activeIdx = parseInt(btn.dataset.idx, 10);
+      _renderDoc(activeIdx);
+    });
 
-    // Image zoom toggle
-    const img = overlay.querySelector('.dv-preview-img');
-    if (img) {
-      img.addEventListener('click', () => img.classList.toggle('zoomed'));
+    // Render first doc
+    if (docs.length > 0) {
+      _renderDoc(0);
+    } else {
+      overlay.querySelector('#dv-toolbar').innerHTML = `
+        <span class="dv-tool-badge"><i class="fa-solid fa-shield-halved"></i> Consent Verified</span>
+      `;
+      overlay.querySelector('#dv-preview-area').innerHTML = `
+        <div class="dv-empty">
+          <div class="dv-empty-icon">📂</div>
+          <div class="dv-empty-text">No documents were submitted with this loan request.</div>
+        </div>`;
     }
-  }
-
-  // ── HTML escape helper ─────────────────────────────────────────────────────
-  function _esc(s) {
-    return String(s || '').replace(/[&<>"']/g, c => (
-      {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
-    ));
   }
 
   // ── Public entry point ─────────────────────────────────────────────────────
-  /**
-   * Open the Borrower Documents viewer for a given loan.
-   * Shows legal gate first (unless consent already given this session).
-   *
-   * @param {string|number} loanId  - Loan ID
-   * @param {object|null}   col     - Collateral object from _normalizeLoan()
-   *   Expected fields: colTypeLabel, assetType, documentURI, documentHash
-   *   If null/undefined, will try to fetch from chain via window.web3.
-   */
   async function open(loanId, col) {
-    // If no collateral provided, try to fetch from chain
     if (!col) {
       const rc = window.web3?.getReadContract?.();
       if (rc) {
-        const toast = typeof showToast === 'function'
-          ? showToast('Loading collateral data…', 'info', 0) : null;
+        const toast = typeof showToast === 'function' ? showToast('Loading collateral data…', 'info', 0) : null;
         try {
-          const raw = await rc.getLoan(loanId);
+          const raw  = await rc.getLoan(loanId);
           const loan = window.web3._normalizeLoan(raw);
           col = loan?.collateral || null;
           toast?.remove?.();
         } catch (e) {
           toast?.remove?.();
-          if (typeof showToast === 'function')
-            showToast('Failed to load collateral data.', 'error');
+          if (typeof showToast === 'function') showToast('Failed to load collateral data.', 'error');
           return;
         }
       }
       if (!col) {
-        if (typeof showToast === 'function')
-          showToast('No collateral data available for this loan.', 'warning');
+        if (typeof showToast === 'function') showToast('No collateral data available for this loan.', 'warning');
         return;
       }
     }
@@ -633,7 +570,6 @@
     }
   }
 
-  // ── Expose global API ──────────────────────────────────────────────────────
   global.DOCS = { open };
 
 })(window);

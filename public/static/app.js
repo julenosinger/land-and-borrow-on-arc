@@ -59,6 +59,7 @@ function showPage(pageId) {
   if (pageId === 'payments')    loadPayments();
   if (pageId === 'home')        loadHomeStats();
   if (pageId === 'settings')    loadSettingsValues();
+  if (pageId === 'borrow')      { if (uploadedDocs.length === 0) { uploadedDocs = []; _renderDocSlots(); } }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -263,9 +264,138 @@ async function loadHomeStats() {
 let borrowerType   = 'individual';
 let collateralType = 'rwa';
 let rwaCryptoToken = 'usdc';
-let uploadedDocHash = null;
+// Multi-doc upload state (up to 5 slots)
+let uploadedDocHash = null;   // kept for single-doc compat (first doc)
 let uploadedDocURI  = null;
 let uploadedDocFile = null;
+let uploadedDocs    = [];     // [{label, hash, uri, file, status:'uploading'|'ipfs'|'local'|'error'}]
+const MAX_DOCS = 5;
+
+// ── Multi-doc helpers ──────────────────────────────────────────────────────
+
+function _getDocLabel(idx) {
+  const labels = ['Identity Document', 'Proof of Ownership', 'Valuation Report', 'Additional Document', 'Supporting Document'];
+  return labels[idx] || `Document ${idx + 1}`;
+}
+
+function _renderDocSlots() {
+  const list = document.getElementById('rwa-docs-list');
+  if (!list) return;
+  if (uploadedDocs.length === 0) { list.innerHTML = ''; _renderAddBtn(); return; }
+
+  list.innerHTML = uploadedDocs.map((doc, i) => `
+    <div class="bw-doc-slot ${doc.status === 'uploading' ? 'processing' : doc.status === 'ipfs' || doc.status === 'local' ? 'done' : 'error'}" id="doc-slot-${i}">
+      <div class="bw-doc-slot-header">
+        <span class="bw-doc-slot-label">${_esc(doc.label || _getDocLabel(i))}</span>
+        <button type="button" class="bw-doc-slot-remove" title="Remove document" onclick="removeDocSlot(${i})">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="bw-doc-slot-body">
+        ${doc.file ? `
+          <div class="bw-doc-slot-info show">
+            <div class="bw-doc-slot-info-icon">📎</div>
+            <div class="bw-doc-slot-info-body">
+              <div class="bw-doc-slot-info-name">${_esc(doc.file.name)} <span class="bw-doc-slot-meta">(${(doc.file.size/1024).toFixed(1)} KB)</span></div>
+              ${doc.hash ? `<div class="bw-doc-slot-info-hash">SHA-256: ${doc.hash.slice(0,32)}…</div>` : ''}
+            </div>
+            <span class="bw-doc-slot-status ${doc.status}">
+              ${doc.status === 'uploading' ? '<i class="fa-solid fa-spinner fa-spin"></i> Uploading…'
+                : doc.status === 'ipfs' ? '<i class="fa-solid fa-cloud"></i> IPFS'
+                : doc.status === 'local' ? '<i class="fa-solid fa-hard-drive"></i> Local hash'
+                : '<i class="fa-solid fa-triangle-exclamation"></i> Error'}
+            </span>
+          </div>
+        ` : `
+          <div class="bw-doc-slot-upload">
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onchange="handleDocSlotUpload(this, ${i})" />
+            <div class="bw-doc-slot-upload-lbl">Drop file or <span>browse</span></div>
+            <div class="bw-doc-slot-upload-sub">PDF, JPG, PNG, WEBP · Max 10 MB</div>
+          </div>
+        `}
+      </div>
+    </div>
+  `).join('');
+  _renderAddBtn();
+}
+
+function _renderAddBtn() {
+  const btn = document.getElementById('rwa-add-doc-btn');
+  if (!btn) return;
+  const canAdd = uploadedDocs.length < MAX_DOCS;
+  btn.style.display = canAdd ? 'flex' : 'none';
+  btn.disabled = !canAdd;
+}
+
+function _esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function addDocSlot() {
+  if (uploadedDocs.length >= MAX_DOCS) return;
+  uploadedDocs.push({ label: _getDocLabel(uploadedDocs.length), hash: null, uri: null, file: null, status: 'empty' });
+  _renderDocSlots();
+}
+
+function removeDocSlot(idx) {
+  uploadedDocs.splice(idx, 1);
+  // Update legacy single-doc vars from first doc
+  _syncLegacyDocVars();
+  _renderDocSlots();
+}
+
+function _syncLegacyDocVars() {
+  const first = uploadedDocs.find(d => d.hash);
+  uploadedDocHash = first?.hash || null;
+  uploadedDocURI  = first?.uri  || null;
+  uploadedDocFile = first?.file || null;
+}
+
+async function handleDocSlotUpload(input, idx) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showToast('File exceeds 10 MB limit', 'error'); return; }
+
+  // Ensure slot exists
+  if (!uploadedDocs[idx]) uploadedDocs[idx] = { label: _getDocLabel(idx) };
+  uploadedDocs[idx].file   = file;
+  uploadedDocs[idx].status = 'uploading';
+  _renderDocSlots();
+
+  try {
+    const hash = await window.web3.hashFile(file);
+    uploadedDocs[idx].hash = hash;
+    uploadedDocs[idx].uri  = `file://${file.name}`;
+    _syncLegacyDocVars();
+
+    // Try IPFS
+    try {
+      const result = await window.web3.uploadToIPFS(file);
+      if (result.localOnly) {
+        uploadedDocs[idx].status = 'local';
+        uploadedDocs[idx].uri    = `file://${file.name}`;
+        uploadedDocs[idx].hash   = result.hash;
+        showToast(`Doc ${idx+1}: Hash saved locally (IPFS not configured)`, 'warning', 5000);
+      } else {
+        uploadedDocs[idx].status = 'ipfs';
+        uploadedDocs[idx].hash   = result.hash.startsWith('0x') ? result.hash : `0x${result.hash}`;
+        uploadedDocs[idx].uri    = result.uri;
+        showToast(`Doc ${idx+1}: Uploaded to IPFS ✓`, 'success', 3000);
+      }
+    } catch {
+      uploadedDocs[idx].status = 'local';
+      showToast(`Doc ${idx+1}: IPFS unavailable — hash saved`, 'warning', 5000);
+    }
+
+    _syncLegacyDocVars();
+    _renderDocSlots();
+    document.getElementById('rwa-doc-err')?.classList.remove('show');
+  } catch (err) {
+    uploadedDocs[idx].status = 'error';
+    _renderDocSlots();
+    showToast('Failed to process document: ' + err.message, 'error');
+  }
+}
 
 function selectBorrowerType(el, type) {
   borrowerType = type;
@@ -350,40 +480,10 @@ function handleRwaCustom(sel) {
   document.getElementById('rwa-custom-group').style.display = sel.value === 'custom' ? 'flex' : 'none';
 }
 
+// handleDocUpload kept as legacy stub (not used by new multi-doc UI)
 async function handleDocUpload(input) {
-  const file = input.files[0];
-  if (!file) return;
-  uploadedDocFile = file;
-  const zone = document.getElementById('rwa-upload-zone');
-  zone.classList.add('has-file');
-
-  showToast('Computing document hash…', 'info', 3000);
-  try {
-    const hash = await window.web3.hashFile(file);
-    uploadedDocHash = hash;
-    uploadedDocURI  = `file://${file.name}`;
-
-    document.getElementById('rwa-doc-info').style.display = 'flex';
-    document.getElementById('rwa-doc-name').textContent  = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
-    document.getElementById('rwa-doc-hash').textContent  = `SHA-256: ${hash}`;
-    document.getElementById('rwa-doc-err').classList.remove('show');
-    showToast('Document hash computed ✓', 'success', 3000);
-
-    // Always try IPFS upload via backend proxy (PINATA_JWT stored as Cloudflare secret)
-    showToast('Uploading to IPFS…', 'info', 0);
-    try {
-      const result = await window.web3.uploadToIPFS(file);
-      uploadedDocHash = result.hash.startsWith('0x') ? result.hash : `0x${result.hash}`;
-      uploadedDocURI  = result.uri;
-      if (result.localOnly) {
-        showToast('IPFS upload unavailable — local hash saved', 'warning');
-      } else {
-        showToast('Document uploaded to IPFS ✓', 'success');
-      }
-    } catch { showToast('IPFS upload failed — local hash used', 'warning'); }
-  } catch (err) {
-    showToast('Failed to process document: ' + err.message, 'error');
-  }
+  if (uploadedDocs.length === 0) addDocSlot();
+  await handleDocSlotUpload(input, 0);
 }
 
 function updateLoanPreview() {
@@ -476,6 +576,7 @@ function borrowStep(step) {
   if (lbl)  lbl.textContent  = `Step ${step} of 4`;
 
   if (step === 4) buildReviewPanel();
+  if (step === 3) { if (uploadedDocs.length === 0) addDocSlot(); else _renderDocSlots(); }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -527,7 +628,7 @@ function validateBorrowStep(step) {
       if (!document.getElementById('rwa-description').value.trim()) { setFieldError('rwa-description','Provide asset description'); valid=false; }
       if (!document.getElementById('rwa-value').value || parseFloat(document.getElementById('rwa-value').value) <= 0) { setFieldError('rwa-value','Enter estimated value'); valid=false; }
       if (!document.getElementById('rwa-jurisdiction').value.trim()) { setFieldError('rwa-jurisdiction','Enter jurisdiction'); valid=false; }
-      if (!uploadedDocHash) { const el = document.getElementById('rwa-doc-err'); if(el){el.textContent='Upload a notarized document'; el.classList.add('show');} valid=false; }
+      if (!uploadedDocHash) { const el = document.getElementById('rwa-doc-err'); if(el){el.textContent='Upload at least one document'; el.classList.add('show');} valid=false; }
     }
     if (collateralType === 'crypto') {
       clearFieldError('crypto-amount');
@@ -592,7 +693,7 @@ function buildReviewPanel() {
           <div class="bw-review-row"><span class="bw-review-lbl">Type</span><span class="badge badge-rwa">🏠 Real-World Asset</span></div>
           <div class="bw-review-row"><span class="bw-review-lbl">Asset</span><span class="bw-review-val">${assetType}</span></div>
           <div class="bw-review-row"><span class="bw-review-lbl">Estimated value</span><span class="bw-review-val bw-mono">$${parseFloat(rwaVal||0).toFixed(2)}</span></div>
-          <div class="bw-review-row"><span class="bw-review-lbl">Document hash</span><span class="bw-review-val bw-mono" style="font-size:11px;">${uploadedDocHash ? uploadedDocHash.slice(0,32)+'…' : '—'}</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Documents</span><span class="bw-review-val">${uploadedDocs.filter(d=>d.hash).length} file(s) — ${uploadedDocs.filter(d=>d.status==='ipfs').length} on IPFS</span></div>
         ` : `
           <div class="bw-review-row"><span class="bw-review-lbl">Type</span><span class="badge badge-crypto">🔐 Crypto Escrow</span></div>
           <div class="bw-review-row"><span class="bw-review-lbl">Token</span><span class="bw-review-val">${(typeof rwaCryptoToken !== 'undefined' ? rwaCryptoToken : 'usdc').toUpperCase()}</span></div>
@@ -647,13 +748,19 @@ async function submitLoan() {
         ? uploadedDocHash.padEnd(66, '0').slice(0, 66)
         : '0x' + (uploadedDocHash || '0').replace('0x','').padEnd(64,'0').slice(0,64);
 
+      // Build multi-doc array (only docs with a hash)
+      const docsArr = uploadedDocs
+        .filter(d => d.hash)
+        .map(d => ({ label: d.label || '', hash: d.hash || '', uri: d.uri || '', status: d.status || 'local' }));
+
       result = await window.web3.createLoanWithRWA(borrowerInfo, amount, installments, {
         assetType,
-        description:      document.getElementById('rwa-description').value.trim(),
+        description:       document.getElementById('rwa-description').value.trim(),
         estimatedValueUSD: document.getElementById('rwa-value').value,
-        jurisdiction:     document.getElementById('rwa-jurisdiction').value.trim(),
-        documentHash:     docHashHex,
-        documentURI:      uploadedDocURI || ''
+        jurisdiction:      document.getElementById('rwa-jurisdiction').value.trim(),
+        documentHash:      docHashHex,
+        documentURI:       uploadedDocURI || '',
+        docs:              docsArr
       });
     } else {
       const tokenAddr = rwaCryptoToken === 'usdc'
@@ -716,8 +823,8 @@ function resetBorrowForm() {
     if (el) el.selectedIndex = 0;
   });
   uploadedDocHash = null; uploadedDocURI = null; uploadedDocFile = null;
-  document.getElementById('rwa-doc-info').style.display = 'none';
-  document.getElementById('rwa-upload-zone').classList.remove('has-file');
+  uploadedDocs = [];
+  _renderDocSlots();
   document.getElementById('loan-preview').style.display = 'none';
   selectCollateralType('rwa');
 }
@@ -1458,21 +1565,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load home stats
   loadHomeStats();
 
-  // Drag-and-drop for upload zone
-  const zone = document.getElementById('rwa-upload-zone');
-  if (zone) {
-    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-    zone.addEventListener('drop', (e) => {
-      e.preventDefault(); zone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) {
-        const input = document.getElementById('rwa-doc-file');
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        handleDocUpload(input);
-      }
+  // Initialize first doc slot and setup drag-drop on the docs list container
+  addDocSlot();
+
+  // Delegate drag-and-drop to first available empty slot
+  const docsList = document.getElementById('rwa-docs-list');
+  if (docsList) {
+    docsList.addEventListener('dragover', (e) => { e.preventDefault(); docsList.classList.add('dragover'); });
+    docsList.addEventListener('dragleave', () => docsList.classList.remove('dragover'));
+    docsList.addEventListener('drop', (e) => {
+      e.preventDefault(); docsList.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files).slice(0, MAX_DOCS);
+      files.forEach((file, fi) => {
+        const idx = uploadedDocs.length < MAX_DOCS ? uploadedDocs.length : -1;
+        if (idx === -1) return;
+        addDocSlot();
+        // Simulate input for the new slot
+        const fakeInput = { files: [file] };
+        handleDocSlotUpload(fakeInput, idx);
+      });
     });
   }
 
