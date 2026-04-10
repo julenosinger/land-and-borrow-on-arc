@@ -11,7 +11,9 @@
 
 ## 🌐 Live Demo
 
-**App:** running on Arc Testnet — connect MetaMask to get started.
+**🚀 Production:** [https://arcfi.pages.dev](https://arcfi.pages.dev)  
+**🔀 Latest Deploy:** [https://316d6a9a.arcfi.pages.dev](https://316d6a9a.arcfi.pages.dev)  
+**🏥 Health Check:** [https://arcfi.pages.dev/api/health](https://arcfi.pages.dev/api/health)
 
 ---
 
