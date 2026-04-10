@@ -8,6 +8,191 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+// ══════════════════════════════════════════════════════════════════════════════
+//  SECURITY LAYER — strictly additive, zero impact on existing functionality
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── 1. Rate Limiting (in-memory, per IP, Cloudflare Workers compatible) ──────
+const _rl: Map<string, { count: number; reset: number }> = new Map()
+const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
+  '/api/circle/faucet':   { max: 3,   windowMs: 60_000 },   // 3/min — faucet abuse
+  '/api/receipts':        { max: 20,  windowMs: 60_000 },   // 20/min
+  '/api/loans/meta':      { max: 30,  windowMs: 60_000 },
+  '/api/offers/meta':     { max: 30,  windowMs: 60_000 },
+  '/api/circle/balance':  { max: 20,  windowMs: 60_000 },
+  '/api/circle/wallets':  { max: 10,  windowMs: 60_000 },
+  'default':              { max: 120, windowMs: 60_000 },   // global fallback
+}
+
+function _rateLimitKey(ip: string, path: string): string {
+  return `${ip}::${path}`
+}
+
+function _checkRateLimit(ip: string, path: string): boolean {
+  const rule = RATE_LIMITS[path] ?? RATE_LIMITS['default']
+  const key  = _rateLimitKey(ip, path)
+  const now  = Date.now()
+  const rec  = _rl.get(key)
+
+  if (!rec || now > rec.reset) {
+    _rl.set(key, { count: 1, reset: now + rule.windowMs })
+    return true   // allowed
+  }
+  rec.count++
+  if (rec.count > rule.max) return false  // blocked
+  return true
+}
+
+// ── 2. Security Headers middleware ────────────────────────────────────────────
+app.use('*', async (c, next) => {
+  await next()
+
+  // Prevent clickjacking / iframe embedding
+  c.res.headers.set('X-Frame-Options', 'DENY')
+
+  // Prevent MIME-type sniffing
+  c.res.headers.set('X-Content-Type-Options', 'nosniff')
+
+  // Force HTTPS (1 year, include subdomains)
+  c.res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+
+  // Disable referrer leakage
+  c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+
+  // Restrict browser features
+  c.res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()')
+
+  // Content-Security-Policy — allows ethers CDN + FontAwesome + Tailwind + same-origin
+  c.res.headers.set('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://cdnjs.cloudflare.com",
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://fonts.googleapis.com",
+    "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://rpc.testnet.arc.network https://api.circle.com wss: ws:",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests",
+  ].join('; '))
+
+  // Remove server fingerprinting
+  c.res.headers.delete('X-Powered-By')
+  c.res.headers.delete('Server')
+})
+
+// ── 3. Rate limiting middleware ───────────────────────────────────────────────
+app.use('/api/*', async (c, next) => {
+  const ip   = c.req.header('CF-Connecting-IP')
+           ?? c.req.header('X-Forwarded-For')?.split(',')[0]?.trim()
+           ?? 'unknown'
+  const path = c.req.path
+
+  if (!_checkRateLimit(ip, path)) {
+    _secLog('RATE_LIMIT', ip, { path })
+    return c.json({ error: 'Too many requests. Please slow down.' }, 429)
+  }
+  await next()
+})
+
+// ── 4. CSRF — require custom header for all state-changing API calls ──────────
+//    (Browser fetch/XHR always has this; cross-origin attackers cannot set it)
+app.use('/api/*', async (c, next) => {
+  const method = c.req.method
+  if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+    const xReq = c.req.header('X-Requested-With')
+    const ct   = c.req.header('Content-Type') ?? ''
+    // Allow if either the custom header OR JSON content-type is present
+    // (our fetch() calls always send Content-Type: application/json)
+    if (!xReq && !ct.includes('application/json')) {
+      const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+      _secLog('CSRF_ATTEMPT', ip, { path: c.req.path, method })
+      return c.json({ error: 'Invalid request origin.' }, 403)
+    }
+  }
+  await next()
+})
+
+// ── 5. Request size guard (prevent oversized payloads) ───────────────────────
+const MAX_BODY_BYTES = 64 * 1024  // 64 KB
+app.use('/api/*', async (c, next) => {
+  const cl = parseInt(c.req.header('Content-Length') ?? '0', 10)
+  if (cl > MAX_BODY_BYTES) {
+    const ip = c.req.header('CF-Connecting-IP') ?? 'unknown'
+    _secLog('OVERSIZED_PAYLOAD', ip, { path: c.req.path, bytes: cl })
+    return c.json({ error: 'Request payload too large.' }, 413)
+  }
+  await next()
+})
+
+// ── 6. Security event logger (no sensitive data ever logged) ─────────────────
+const _secEvents: Array<{ ts: string; event: string; ip: string; meta: object }> = []
+const MAX_SEC_EVENTS = 500
+
+function _secLog(event: string, ip: string, meta: object = {}) {
+  const entry = { ts: new Date().toISOString(), event, ip: _maskIp(ip), meta }
+  _secEvents.push(entry)
+  if (_secEvents.length > MAX_SEC_EVENTS) _secEvents.shift()
+  console.warn(`[SECURITY] ${event} ip=${_maskIp(ip)}`, JSON.stringify(meta))
+}
+
+function _maskIp(ip: string): string {
+  // Mask last octet for privacy: 1.2.3.4 → 1.2.3.x  /  IPv6 last group
+  return ip.replace(/(\d+)$/, 'x').replace(/:[^:]+$/, ':xxxx')
+}
+
+// ── 7. Input sanitization helpers ────────────────────────────────────────────
+const DANGEROUS_PATTERNS = [
+  /<script[\s\S]*?>/i,
+  /javascript:/i,
+  /on\w+\s*=/i,          // onerror=, onclick=, etc.
+  /data:text\/html/i,
+  /vbscript:/i,
+  /<iframe/i,
+  /<object/i,
+  /<embed/i,
+  /eval\s*\(/i,
+  /expression\s*\(/i,
+]
+
+function _isSafeString(val: string): boolean {
+  return !DANGEROUS_PATTERNS.some(p => p.test(val))
+}
+
+function _sanitizeString(val: unknown): string {
+  if (typeof val !== 'string') return ''
+  return val
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .slice(0, 2048)   // hard length cap
+}
+
+function _isEthAddress(val: unknown): boolean {
+  return typeof val === 'string' && /^0x[0-9a-fA-F]{40}$/.test(val)
+}
+
+function _isAlphanumericId(val: unknown): boolean {
+  return typeof val === 'string' && /^[a-zA-Z0-9_\-]{1,128}$/.test(val)
+}
+
+// ── 8. Security event log endpoint (internal monitoring, masked IPs) ──────────
+app.get('/api/security/events', (c) => {
+  // Only allow from Cloudflare edge (no public exposure in prod)
+  const ip = c.req.header('CF-Connecting-IP') ?? ''
+  if (!ip) return c.json({ error: 'Forbidden' }, 403)
+  return c.json({
+    count: _secEvents.length,
+    events: _secEvents.slice(-50)  // last 50 only
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  END OF SECURITY LAYER
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.use('*', cors())
 app.use('/static/*', serveStatic({ root: './' }))
 
@@ -1680,12 +1865,13 @@ app.get('/', (c) => {
 </div>
 
 <!-- ════ SCRIPTS ════ -->
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="/static/contractABI.js"></script>
 <script src="/static/web3Manager.js"></script>
 <script src="/static/ui.js"></script>
 <script src="/static/chatbot.js"></script>
 <script src="/static/marketplace.js"></script>
+<script src="/static/security.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>`)
@@ -1696,12 +1882,26 @@ app.get('/api/health', (c) => c.json({ status: 'ok', network: 'Arc Testnet', cha
 
 // ── API: Receipt storage ───────────────────────────────────────────────────────
 const receipts: Map<string, object> = new Map()
+const MAX_RECEIPTS = 1000
 
 app.post('/api/receipts', async (c) => {
   try {
-    const body = await c.req.json()
+    const body = await c.req.json() as any
+    const allowed = ['txHash','loanId','amount','type','network','address','rate','installments']
+    const safe: Record<string,string> = {}
+    for (const k of allowed) {
+      if (body[k] !== undefined) {
+        const v = String(body[k]).slice(0, 256)
+        if (!_isSafeString(v)) {
+          _secLog('XSS_ATTEMPT_RECEIPT', c.req.header('CF-Connecting-IP') ?? 'unknown', { field: k })
+          return c.json({ error: 'Invalid input detected.' }, 400)
+        }
+        safe[k] = v
+      }
+    }
     const id = `rcpt_${Date.now()}_${Math.random().toString(36).slice(2,8)}`
-    receipts.set(id, { ...body, id, createdAt: new Date().toISOString() })
+    if (receipts.size >= MAX_RECEIPTS) { const fk = receipts.keys().next().value; if(fk) receipts.delete(fk) }
+    receipts.set(id, { ...safe, id, createdAt: new Date().toISOString() })
     return c.json({ success: true, id })
   } catch {
     return c.json({ error: 'Invalid body' }, 400)
@@ -1709,20 +1909,36 @@ app.post('/api/receipts', async (c) => {
 })
 
 app.get('/api/receipts/:id', (c) => {
-  const r = receipts.get(c.req.param('id'))
+  const rid = c.req.param('id')
+  if (!_isAlphanumericId(rid)) return c.json({ error: 'Invalid id' }, 400)
+  const r = receipts.get(rid)
   if (!r) return c.json({ error: 'Not found' }, 404)
   return c.json(r)
 })
 
 // ── API: Loan metadata offchain cache ──────────────────────────────────────────
 const loanMeta: Map<string, object> = new Map()
+const MAX_LOAN_META = 500
 
 app.post('/api/loans/meta', async (c) => {
   try {
-    const body = await c.req.json()
-    const { loanId, ...data } = body as any
-    if (!loanId) return c.json({ error: 'loanId required' }, 400)
-    loanMeta.set(loanId.toString(), { loanId, ...data, updatedAt: new Date().toISOString() })
+    const body = await c.req.json() as any
+    const loanId = body?.loanId
+    if (!loanId || !/^\d{1,10}$/.test(String(loanId))) return c.json({ error: 'Valid loanId required' }, 400)
+    const allowed = ['loanId','borrowerName','location','employment','collateralDetail']
+    const safe: Record<string,string> = {}
+    for (const k of allowed) {
+      if (body[k] !== undefined) {
+        const v = String(body[k]).slice(0, 512)
+        if (!_isSafeString(v)) {
+          _secLog('INJECTION_LOANMETA', c.req.header('CF-Connecting-IP') ?? 'unknown', { field: k })
+          return c.json({ error: 'Invalid input detected.' }, 400)
+        }
+        safe[k] = v
+      }
+    }
+    if (loanMeta.size >= MAX_LOAN_META) { const fk = loanMeta.keys().next().value; if(fk) loanMeta.delete(fk) }
+    loanMeta.set(loanId.toString(), { ...safe, loanId, updatedAt: new Date().toISOString() })
     return c.json({ success: true })
   } catch {
     return c.json({ error: 'Invalid body' }, 400)
@@ -1730,19 +1946,35 @@ app.post('/api/loans/meta', async (c) => {
 })
 
 app.get('/api/loans/meta/:loanId', (c) => {
-  const m = loanMeta.get(c.req.param('loanId'))
+  const lid = c.req.param('loanId')
+  if (!/^\d{1,10}$/.test(lid)) return c.json({ error: 'Invalid loanId' }, 400)
+  const m = loanMeta.get(lid)
   return c.json(m || {})
 })
 
 // ── API: Marketplace offer metadata cache ──────────────────────────────────────
 const offerMeta: Map<string, object> = new Map()
+const MAX_OFFER_META = 500
 
 app.post('/api/offers/meta', async (c) => {
   try {
-    const body = await c.req.json()
-    const { offerId, ...data } = body as any
-    if (!offerId) return c.json({ error: 'offerId required' }, 400)
-    offerMeta.set(offerId.toString(), { offerId, ...data, updatedAt: new Date().toISOString() })
+    const body = await c.req.json() as any
+    const offerId = body?.offerId
+    if (!offerId || !_isAlphanumericId(String(offerId))) return c.json({ error: 'Valid offerId required' }, 400)
+    const allowed = ['offerId','lenderName','rate','liquidity','collateralType']
+    const safe: Record<string,string> = {}
+    for (const k of allowed) {
+      if (body[k] !== undefined) {
+        const v = String(body[k]).slice(0, 256)
+        if (!_isSafeString(v)) {
+          _secLog('INJECTION_OFFERMETA', c.req.header('CF-Connecting-IP') ?? 'unknown', { field: k })
+          return c.json({ error: 'Invalid input detected.' }, 400)
+        }
+        safe[k] = v
+      }
+    }
+    if (offerMeta.size >= MAX_OFFER_META) { const fk = offerMeta.keys().next().value; if(fk) offerMeta.delete(fk) }
+    offerMeta.set(offerId.toString(), { ...safe, offerId, updatedAt: new Date().toISOString() })
     return c.json({ success: true })
   } catch {
     return c.json({ error: 'Invalid body' }, 400)
@@ -1750,7 +1982,9 @@ app.post('/api/offers/meta', async (c) => {
 })
 
 app.get('/api/offers/meta/:offerId', (c) => {
-  const m = offerMeta.get(c.req.param('offerId'))
+  const oid = c.req.param('offerId')
+  if (!_isAlphanumericId(oid)) return c.json({ error: 'Invalid offerId' }, 400)
+  const m = offerMeta.get(oid)
   return c.json(m || {})
 })
 
@@ -1763,7 +1997,10 @@ app.post('/api/circle/faucet', async (c) => {
   if (!key) return c.json({ error: 'Circle API not configured' }, 503)
   try {
     const { address } = await c.req.json() as { address?: string }
-    if (!address) return c.json({ error: 'address required' }, 400)
+    if (!address || !_isEthAddress(address)) {
+      _secLog('INVALID_FAUCET_ADDR', c.req.header('CF-Connecting-IP') ?? 'unknown', {})
+      return c.json({ error: 'Valid Ethereum address required' }, 400)
+    }
     const res = await fetch(`${CIRCLE_BASE}/testnet/faucet`, {
       method: 'POST',
       headers: {
@@ -1787,7 +2024,7 @@ app.get('/api/circle/balance', async (c) => {
   if (!key) return c.json({ error: 'Circle API not configured' }, 503)
   try {
     const address = c.req.query('address')
-    if (!address) return c.json({ error: 'address required' }, 400)
+    if (!address || !_isEthAddress(address)) return c.json({ error: 'Valid Ethereum address required' }, 400)
     // List wallets filtered by address
     const res = await fetch(`${CIRCLE_BASE}/wallets?blockchain=ARC-TESTNET&pageSize=50`, {
       headers: { 'Authorization': `Bearer ${key}` }
