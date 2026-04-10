@@ -28,6 +28,26 @@ class ArcFiAgent {
       return { intent: 'PAY_SPECIFIC_INSTALLMENT', index: parseInt(match[1]) - 1, confidence: 0.92 };
     }
 
+    // Marketplace / Offer intents
+    if (/(create|add|new|open)\s*(a\s*)?(loan\s*)?offer/i.test(lower) || /lend\s*(usdc|money|funds)/i.test(lower)) {
+      return { intent: 'CREATE_OFFER', confidence: 0.92 };
+    }
+    if (/(show|view|list|my)\s*(my\s*)?(offers?|lending|lend\s*activity)/i.test(lower)) {
+      return { intent: 'SHOW_MY_OFFERS', confidence: 0.91 };
+    }
+    if (/(how\s*much|what\s*is)\s*(my\s*)?(liquidity|available\s*funds?)/i.test(lower)) {
+      return { intent: 'CHECK_LIQUIDITY', confidence: 0.90 };
+    }
+    if (/(pause|suspend)\s*(my\s*)?offer/i.test(lower)) {
+      return { intent: 'PAUSE_OFFER', confidence: 0.88 };
+    }
+    if (/(resume|reactivate)\s*(my\s*)?offer/i.test(lower)) {
+      return { intent: 'RESUME_OFFER', confidence: 0.88 };
+    }
+    if (/(browse|show|view|list)\s*(the\s*)?(marketplace|offers?|lend\s*offers?)/i.test(lower)) {
+      return { intent: 'BROWSE_MARKETPLACE', confidence: 0.91 };
+    }
+
     // Query intents
     if (/how\s*much\s*(do\s*i\s*owe|is\s*(left|remaining)|is\s*my\s*(balance|debt))/i.test(lower)) {
       return { intent: 'CHECK_BALANCE', confidence: 0.93 };
@@ -106,6 +126,19 @@ class ArcFiAgent {
           return await this._cancelLoan(loanId);
         case 'APPLY_LOAN':
           return this._applyLoan();
+        // Marketplace intents
+        case 'CREATE_OFFER':
+          return this._createOffer();
+        case 'SHOW_MY_OFFERS':
+          return await this._showMyOffers();
+        case 'CHECK_LIQUIDITY':
+          return await this._checkLiquidity();
+        case 'PAUSE_OFFER':
+          return this._pauseOffer();
+        case 'RESUME_OFFER':
+          return this._resumeOffer();
+        case 'BROWSE_MARKETPLACE':
+          return this._browseMarketplace();
         default:
           return this._unknown(userInput);
       }
@@ -131,7 +164,7 @@ class ArcFiAgent {
 
   _help() {
     return {
-      text: `**Available Commands:**\n\n💰 **Payments**\n• "Pay next installment"\n• "Pay installment #2"\n• "Pay full loan"\n\n📊 **Queries**\n• "How much do I owe?"\n• "Show my payment history"\n• "Check my loan status"\n• "When is my next payment?"\n• "Check wallet balance"\n\n🔧 **Management**\n• "Apply for a loan"\n• "Cancel my loan"\n\n💡 Tip: Include loan number for specific loans, e.g. "Pay next installment for loan #3"`,
+      text: `**Available Commands:**\n\n💰 **Payments**\n• "Pay next installment"\n• "Pay installment #2"\n• "Pay full loan"\n\n📊 **Queries**\n• "How much do I owe?"\n• "Show my payment history"\n• "Check my loan status"\n• "When is my next payment?"\n• "Check wallet balance"\n\n🏪 **Marketplace**\n• "Browse marketplace"\n• "Create a loan offer"\n• "Show my offers"\n• "How much liquidity do I have?"\n• "Pause my offer"\n\n🔧 **Management**\n• "Apply for a loan"\n• "Cancel my loan"\n\n💡 Include loan/offer number for specifics: "Pay installment #2 for loan #3"`,
       type: 'help'
     };
   }
@@ -409,6 +442,96 @@ class ArcFiAgent {
       text: "To apply for a loan, click **'New Loan'** in the navigation or go to the Borrower section. I'll guide you through the process!",
       type: 'info',
       action: { type: 'NAVIGATE', target: 'borrow' }
+    };
+  }
+
+  // ── Marketplace Methods ──────────────────────────────────────────────────────
+  _createOffer() {
+    return {
+      text: "To create a lending offer:\n1. Go to the **Lend** page\n2. Fill in your lender details, liquidity amount, and terms\n3. Set your interest rate (≤ 5%/month) and installment limits\n4. Choose accepted collateral types\n5. Click **'Lock Liquidity & Create Offer'**\n\nYour USDC will be locked in the smart contract and visible to borrowers.",
+      type: 'info',
+      action: { type: 'NAVIGATE', target: 'lend' }
+    };
+  }
+
+  async _showMyOffers() {
+    if (!window.web3.isConnected()) {
+      return { text: '🔐 Please connect your wallet first.', type: 'warning' };
+    }
+    if (!window.web3.marketplaceContract) {
+      return { text: '🔧 Marketplace contract not configured. Add the address in Settings.', type: 'warning' };
+    }
+
+    const offers = await window.web3.getLenderOffers();
+    if (!offers.length) {
+      return {
+        text: "You don't have any lending offers yet.\n\nType **'Create a loan offer'** or go to the **Lend** page to get started!",
+        type: 'info'
+      };
+    }
+
+    let text = `**Your Lending Offers (${offers.length} total):**\n\n`;
+    offers.forEach(o => {
+      text += `• Offer #${o.id}: **${o.interestRatePct}%/mo** | Available: **$${parseFloat(o.availableLiquidity).toFixed(0)} USDC** | Status: **${o.statusLabel}** | ${o.totalLoansIssued} loan(s)\n`;
+    });
+    text += '\nGo to **My Lending** to manage your offers.';
+
+    return {
+      text,
+      type: 'info',
+      action: { type: 'NAVIGATE', target: 'my-lending' }
+    };
+  }
+
+  async _checkLiquidity() {
+    if (!window.web3.isConnected()) {
+      return { text: '🔐 Please connect your wallet first.', type: 'warning' };
+    }
+    if (!window.web3.marketplaceContract) {
+      return { text: '🔧 Marketplace contract not configured.', type: 'warning' };
+    }
+
+    const offers = await window.web3.getLenderOffers();
+    const walletBal = await window.web3.getUSDCBalance();
+
+    if (!offers.length) {
+      return {
+        text: `**Your Liquidity Status:**\n• Wallet USDC: **$${parseFloat(walletBal).toFixed(2)}**\n• No active offers yet.\n\nCreate a lending offer to deploy your capital!`,
+        type: 'info'
+      };
+    }
+
+    const totalAvail     = offers.reduce((s,o) => s + parseFloat(o.availableLiquidity||0), 0);
+    const totalAllocated = offers.reduce((s,o) => s + parseFloat(o.allocatedLiquidity||0), 0);
+    const totalLocked    = offers.reduce((s,o) => s + parseFloat(o.totalLiquidity||0), 0);
+
+    return {
+      text: `**Your Liquidity Summary:**\n• Wallet USDC: **$${parseFloat(walletBal).toFixed(2)}**\n• Total Locked in Offers: **$${totalLocked.toFixed(2)} USDC**\n• Available (unallocated): **$${totalAvail.toFixed(2)} USDC**\n• Allocated (in loans): **$${totalAllocated.toFixed(2)} USDC**\n• Active Offers: ${offers.filter(o=>o.statusLabel==='ACTIVE').length}`,
+      type: 'info'
+    };
+  }
+
+  _pauseOffer() {
+    return {
+      text: "To pause an offer, go to **My Lending** → find your offer → click the pause button (⏸). This hides it from the marketplace temporarily. All active loans continue normally.",
+      type: 'info',
+      action: { type: 'NAVIGATE', target: 'my-lending' }
+    };
+  }
+
+  _resumeOffer() {
+    return {
+      text: "To resume a paused offer, go to **My Lending** → find your paused offer → click **Resume**. The offer will become visible on the marketplace again.",
+      type: 'info',
+      action: { type: 'NAVIGATE', target: 'my-lending' }
+    };
+  }
+
+  _browseMarketplace() {
+    return {
+      text: "Taking you to the **Loan Marketplace** where you can browse all active lender offers, filter by rate, amount, collateral type, and apply directly!",
+      type: 'info',
+      action: { type: 'NAVIGATE', target: 'marketplace' }
     };
   }
 

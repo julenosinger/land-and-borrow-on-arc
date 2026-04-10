@@ -49,11 +49,13 @@ function showPage(pageId) {
   if (btn) btn.classList.add('active');
 
   // Lazy-load page data
-  if (pageId === 'lend')      loadLenderLoans();
-  if (pageId === 'dashboard') loadDashboard();
-  if (pageId === 'payments')  loadPayments();
-  if (pageId === 'home')      loadHomeStats();
-  if (pageId === 'settings')  loadSettingsValues();
+  if (pageId === 'marketplace') loadMarketplace();
+  if (pageId === 'lend')        { loadLenderLoans(); refreshOfferBalance && refreshOfferBalance(); }
+  if (pageId === 'my-lending')  loadMyLending();
+  if (pageId === 'dashboard')   loadDashboard();
+  if (pageId === 'payments')    loadPayments();
+  if (pageId === 'home')        loadHomeStats();
+  if (pageId === 'settings')    loadSettingsValues();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -220,16 +222,20 @@ window.web3.on('accountChanged', ({ address }) => { updateWalletUI(address); sho
 // HOME STATS
 // ══════════════════════════════════════════════════════════════
 async function loadHomeStats() {
-  if (!window.web3.contract) return;
-  try {
-    const loans = await window.web3.getAllLoans();
-    document.getElementById('home-stat-loans').textContent = loans.length;
-    const vol = loans.reduce((s, l) => s + parseFloat(l.principalAmount || 0), 0);
-    document.getElementById('home-stat-vol').textContent = `$${vol.toFixed(0)}`;
-    const completed = loans.filter(l => l.statusLabel === 'COMPLETED').length;
-    const rate = loans.length ? Math.round((completed / loans.length) * 100) : 0;
-    document.getElementById('home-stat-rate').textContent = `${rate}%`;
-  } catch { /* silent */ }
+  if (window.web3.contract) {
+    try {
+      const loans = await window.web3.getAllLoans();
+      document.getElementById('home-stat-loans').textContent = loans.length;
+    } catch { /* silent */ }
+  }
+  if (window.web3.marketplaceContract) {
+    try {
+      const offers = await window.web3.getActiveOffers();
+      const totalLiq = offers.reduce((s,o) => s + parseFloat(o.availableLiquidity||0), 0);
+      document.getElementById('home-stat-offers') && (document.getElementById('home-stat-offers').textContent = offers.length);
+      document.getElementById('home-stat-vol')    && (document.getElementById('home-stat-vol').textContent    = `$${totalLiq.toFixed(0)}`);
+    } catch { /* silent */ }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1134,37 +1140,43 @@ function showReceiptModal(data) {
 // ══════════════════════════════════════════════════════════════
 function loadSettingsValues() {
   document.getElementById('cfg-contract').value      = localStorage.getItem('arcfi-contract') || '';
+  document.getElementById('cfg-marketplace').value   = localStorage.getItem('arcfi-marketplace') || '';
   document.getElementById('cfg-usdc').value          = localStorage.getItem('arcfi-usdc') || '';
   document.getElementById('cfg-pinata-key').value    = localStorage.getItem('arcfi-pinata-key') || '';
   document.getElementById('cfg-pinata-secret').value = localStorage.getItem('arcfi-pinata-secret') || '';
 }
 
 function saveSettings() {
-  const contractAddr = document.getElementById('cfg-contract').value.trim();
-  const usdcAddr     = document.getElementById('cfg-usdc').value.trim();
-  const pinataKey    = document.getElementById('cfg-pinata-key').value.trim();
-  const pinataSecret = document.getElementById('cfg-pinata-secret').value.trim();
+  const contractAddr   = document.getElementById('cfg-contract').value.trim();
+  const marketplaceAddr= document.getElementById('cfg-marketplace').value.trim();
+  const usdcAddr       = document.getElementById('cfg-usdc').value.trim();
+  const pinataKey      = document.getElementById('cfg-pinata-key').value.trim();
+  const pinataSecret   = document.getElementById('cfg-pinata-secret').value.trim();
 
-  if (contractAddr) localStorage.setItem('arcfi-contract', contractAddr);
-  if (usdcAddr)     localStorage.setItem('arcfi-usdc', usdcAddr);
-  if (pinataKey)    localStorage.setItem('arcfi-pinata-key', pinataKey);
-  if (pinataSecret) localStorage.setItem('arcfi-pinata-secret', pinataSecret);
+  if (contractAddr)    localStorage.setItem('arcfi-contract', contractAddr);
+  if (marketplaceAddr) localStorage.setItem('arcfi-marketplace', marketplaceAddr);
+  if (usdcAddr)        localStorage.setItem('arcfi-usdc', usdcAddr);
+  if (pinataKey)       localStorage.setItem('arcfi-pinata-key', pinataKey);
+  if (pinataSecret)    localStorage.setItem('arcfi-pinata-secret', pinataSecret);
 
   // Apply to globals
-  window.LOAN_CONTRACT_ADDRESS   = contractAddr;
-  window.USDC_CONTRACT_ADDRESS   = usdcAddr;
-  window.CONTRACT_ADDRESS        = contractAddr;
-  window.USDC_ADDRESS            = usdcAddr;
-  window.PINATA_API_KEY          = pinataKey;
-  window.PINATA_SECRET_KEY       = pinataSecret;
+  window.LOAN_CONTRACT_ADDRESS        = contractAddr;
+  window.USDC_CONTRACT_ADDRESS        = usdcAddr;
+  window.MARKETPLACE_CONTRACT_ADDRESS = marketplaceAddr;
+  window.CONTRACT_ADDRESS             = contractAddr;
+  window.USDC_ADDRESS                 = usdcAddr;
+  window.MARKETPLACE_ADDRESS          = marketplaceAddr;
+  window.PINATA_API_KEY               = pinataKey;
+  window.PINATA_SECRET_KEY            = pinataSecret;
 
   // Re-init contracts if wallet connected
   if (window.web3.signer) {
-    if (contractAddr) window.web3.contract     = new ethers.Contract(contractAddr, window.LOAN_ABI,   window.web3.signer);
-    if (usdcAddr)     window.web3.usdcContract = new ethers.Contract(usdcAddr,    window.ERC20_ABI,  window.web3.signer);
+    if (contractAddr)    window.web3.contract             = new ethers.Contract(contractAddr,    window.LOAN_ABI,        window.web3.signer);
+    if (usdcAddr)        window.web3.usdcContract         = new ethers.Contract(usdcAddr,        window.ERC20_ABI,       window.web3.signer);
+    if (marketplaceAddr) window.web3.marketplaceContract  = new ethers.Contract(marketplaceAddr, window.MARKETPLACE_ABI, window.web3.signer);
   }
 
-  // Hide config banner if both are set
+  // Hide config banner if all critical are set
   if (contractAddr && usdcAddr) document.getElementById('config-banner').style.display = 'none';
 
   document.getElementById('settings-saved-msg').style.display = 'flex';
@@ -1299,20 +1311,22 @@ function confirmAction(title, message) {
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   // Load saved settings
-  const savedContract = localStorage.getItem('arcfi-contract');
-  const savedUsdc     = localStorage.getItem('arcfi-usdc');
-  const savedPinata   = localStorage.getItem('arcfi-pinata-key');
-  const savedSecret   = localStorage.getItem('arcfi-pinata-secret');
+  const savedContract   = localStorage.getItem('arcfi-contract');
+  const savedMarketplace= localStorage.getItem('arcfi-marketplace');
+  const savedUsdc       = localStorage.getItem('arcfi-usdc');
+  const savedPinata     = localStorage.getItem('arcfi-pinata-key');
+  const savedSecret     = localStorage.getItem('arcfi-pinata-secret');
 
-  if (savedContract) { window.LOAN_CONTRACT_ADDRESS = savedContract; window.CONTRACT_ADDRESS = savedContract; }
-  if (savedUsdc)     { window.USDC_CONTRACT_ADDRESS = savedUsdc;    window.USDC_ADDRESS     = savedUsdc; }
-  if (savedPinata)   { window.PINATA_API_KEY     = savedPinata; }
-  if (savedSecret)   { window.PINATA_SECRET_KEY  = savedSecret; }
+  if (savedContract)    { window.LOAN_CONTRACT_ADDRESS = savedContract;    window.CONTRACT_ADDRESS     = savedContract; }
+  if (savedMarketplace) { window.MARKETPLACE_CONTRACT_ADDRESS = savedMarketplace; window.MARKETPLACE_ADDRESS = savedMarketplace; }
+  if (savedUsdc)        { window.USDC_CONTRACT_ADDRESS = savedUsdc;        window.USDC_ADDRESS         = savedUsdc; }
+  if (savedPinata)      { window.PINATA_API_KEY     = savedPinata; }
+  if (savedSecret)      { window.PINATA_SECRET_KEY  = savedSecret; }
   if (savedContract && savedUsdc) document.getElementById('config-banner').style.display = 'none';
 
   // Init chatbot welcome message
   setTimeout(() => {
-    addChatMessage('bot', "👋 Hi! I'm **ArcFi AI**. I help you manage loans and payments on Arc Testnet.\n\nType **help** to see what I can do!");
+    addChatMessage('bot', "👋 Hi! I'm **ArcFi AI**. I help you manage loans, payments, and marketplace offers on Arc Testnet.\n\nType **help** to see what I can do!");
   }, 1000);
 
   // Auto-connect if previously connected
@@ -1350,4 +1364,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Auto-fill wallet on lend page
+  window.web3.on('connected', ({ address }) => {
+    const ofWallet = document.getElementById('of-wallet');
+    if (ofWallet) ofWallet.value = address;
+    refreshOfferBalance && refreshOfferBalance();
+  });
 });

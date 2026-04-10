@@ -57,6 +57,10 @@ class Web3Manager {
     if (window.USDC_ADDRESS && window.USDC_ADDRESS !== '0x0000000000000000000000000000000000000000') {
       this.usdcContract = new ethers.Contract(window.USDC_ADDRESS, window.ERC20_ABI, this.signer);
     }
+    const mktAddr = window.MARKETPLACE_ADDRESS || window.MARKETPLACE_CONTRACT_ADDRESS || '';
+    if (mktAddr && mktAddr !== '0x0000000000000000000000000000000000000000') {
+      this.marketplaceContract = new ethers.Contract(mktAddr, window.MARKETPLACE_ABI, this.signer);
+    }
   }
 
   async _ensureArcNetwork() {
@@ -463,6 +467,219 @@ class Web3Manager {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit'
     });
+  }
+
+  // ─── Marketplace Operations ────────────────────────────────────────────────
+  async _initMarketplace() {
+    if (this.marketplaceContract) return;
+    const addr = window.MARKETPLACE_ADDRESS || window.MARKETPLACE_CONTRACT_ADDRESS || '';
+    if (addr && addr !== '0x0000000000000000000000000000000000000000' && this.signer) {
+      this.marketplaceContract = new ethers.Contract(addr, window.MARKETPLACE_ABI, this.signer);
+    }
+  }
+
+  async createOffer({
+    lenderName, lenderType, liquidityAmount, interestRateBps, maxInstallments,
+    minLoanAmount, maxLoanAmount, acceptedCollateral, minCollateralRatioBps,
+    geoRestrictions, borrowerPreferences
+  }) {
+    this.requireConnection();
+    this.requireArcNetwork();
+    await this._initMarketplace();
+    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured. Add address in Settings.');
+
+    const liquidityBN      = ethers.utils.parseUnits(liquidityAmount.toString(), 6);
+    const minLoanBN        = ethers.utils.parseUnits(minLoanAmount.toString(), 6);
+    const maxLoanBN        = ethers.utils.parseUnits(maxLoanAmount.toString(), 6);
+
+    // Approve USDC for marketplace
+    if (!this.usdcContract) throw new Error('USDC contract not initialized');
+    const approveTx = await this.usdcContract.approve(
+      window.MARKETPLACE_ADDRESS, liquidityBN
+    );
+    await approveTx.wait();
+
+    const tx = await this.marketplaceContract.createOffer(
+      lenderName,
+      parseInt(lenderType),
+      liquidityBN,
+      parseInt(interestRateBps),
+      parseInt(maxInstallments),
+      minLoanBN,
+      maxLoanBN,
+      parseInt(acceptedCollateral),
+      parseInt(minCollateralRatioBps),
+      geoRestrictions || 'GLOBAL',
+      borrowerPreferences || ''
+    );
+    const receipt = await tx.wait();
+    const event = receipt.events?.find(e => e.event === 'OfferCreated');
+    const offerId = event?.args?.offerId?.toString();
+    return { tx, receipt, offerId };
+  }
+
+  async updateOffer(offerId, params) {
+    this.requireConnection();
+    await this._initMarketplace();
+    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
+    const minLoanBN = ethers.utils.parseUnits(params.minLoanAmount.toString(), 6);
+    const maxLoanBN = ethers.utils.parseUnits(params.maxLoanAmount.toString(), 6);
+    const tx = await this.marketplaceContract.updateOffer(
+      offerId, parseInt(params.interestRateBps), parseInt(params.maxInstallments),
+      minLoanBN, maxLoanBN, parseInt(params.acceptedCollateral),
+      parseInt(params.minCollateralRatioBps), params.geoRestrictions || 'GLOBAL',
+      params.borrowerPreferences || ''
+    );
+    return await tx.wait();
+  }
+
+  async pauseOffer(offerId) {
+    this.requireConnection();
+    await this._initMarketplace();
+    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
+    const tx = await this.marketplaceContract.pauseOffer(offerId);
+    return await tx.wait();
+  }
+
+  async resumeOffer(offerId) {
+    this.requireConnection();
+    await this._initMarketplace();
+    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
+    const tx = await this.marketplaceContract.resumeOffer(offerId);
+    return await tx.wait();
+  }
+
+  async addLiquidity(offerId, amount) {
+    this.requireConnection();
+    await this._initMarketplace();
+    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
+    const amtBN = ethers.utils.parseUnits(amount.toString(), 6);
+    const approveTx = await this.usdcContract.approve(window.MARKETPLACE_ADDRESS, amtBN);
+    await approveTx.wait();
+    const tx = await this.marketplaceContract.addLiquidity(offerId, amtBN);
+    return await tx.wait();
+  }
+
+  async withdrawLiquidity(offerId, amount) {
+    this.requireConnection();
+    await this._initMarketplace();
+    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
+    const amtBN = ethers.utils.parseUnits(amount.toString(), 6);
+    const tx = await this.marketplaceContract.withdrawLiquidity(offerId, amtBN);
+    return await tx.wait();
+  }
+
+  async closeOffer(offerId) {
+    this.requireConnection();
+    await this._initMarketplace();
+    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
+    const tx = await this.marketplaceContract.closeOffer(offerId);
+    return await tx.wait();
+  }
+
+  async getOffer(offerId) {
+    await this._initMarketplace();
+    if (!this.marketplaceContract) return null;
+    try {
+      const r = await this.marketplaceContract.getOffer(offerId);
+      return {
+        id:                 r.id.toString(),
+        lender:             r.lender,
+        lenderName:         r.lenderName,
+        lenderType:         r.lenderType,
+        lenderTypeLabel:    window.LENDER_TYPE[r.lenderType] || 'Individual',
+        totalLiquidity:     ethers.utils.formatUnits(r.totalLiquidity, 6),
+        availableLiquidity: ethers.utils.formatUnits(r.availableLiquidity, 6),
+        allocatedLiquidity: ethers.utils.formatUnits(r.allocatedLiquidity, 6),
+        interestRateBps:    r.interestRateBps.toNumber(),
+        interestRatePct:    (r.interestRateBps.toNumber() / 100).toFixed(2),
+        maxInstallments:    r.maxInstallments.toNumber(),
+        minLoanAmount:      ethers.utils.formatUnits(r.minLoanAmount, 6),
+        maxLoanAmount:      ethers.utils.formatUnits(r.maxLoanAmount, 6),
+        acceptedCollateral: r.acceptedCollateral,
+        collateralLabel:    window.COLLATERAL_PREF[r.acceptedCollateral] || 'Both',
+        minCollateralRatioBps: r.minCollateralRatioBps.toNumber(),
+        minCollateralRatioPct: (r.minCollateralRatioBps.toNumber() / 100).toFixed(0),
+        geoRestrictions:    r.geoRestrictions,
+        status:             r.status,
+        statusLabel:        window.OFFER_STATUS[r.status] || 'ACTIVE',
+        createdAt:          r.createdAt.toNumber(),
+        totalLoansIssued:   r.totalLoansIssued.toNumber(),
+        totalRepaid:        ethers.utils.formatUnits(r.totalRepaid, 6),
+        utilizationRate: r.totalLiquidity.gt(0)
+          ? Math.round((r.allocatedLiquidity.toNumber() / r.totalLiquidity.toNumber()) * 100)
+          : 0,
+        riskLevel: this._calcRiskLevel(r)
+      };
+    } catch (e) {
+      console.error('getOffer error:', e);
+      return null;
+    }
+  }
+
+  _calcRiskLevel(offerRaw) {
+    const colPref = offerRaw.acceptedCollateral;
+    const ratio   = offerRaw.minCollateralRatioBps?.toNumber ? offerRaw.minCollateralRatioBps.toNumber() : 12000;
+    // RWA only → medium (off-chain enforcement)
+    if (colPref === 1) return 'Medium';
+    // Crypto with high ratio → Low
+    if (colPref === 2 && ratio >= 15000) return 'Low';
+    if (colPref === 2) return 'Medium';
+    // Both → depends on ratio
+    if (ratio >= 15000) return 'Low';
+    if (ratio >= 12000) return 'Medium';
+    return 'High';
+  }
+
+  async getAllOffers() {
+    await this._initMarketplace();
+    if (!this.marketplaceContract) return [];
+    try {
+      const ids = await this.marketplaceContract.getAllOfferIds();
+      const offers = await Promise.all(ids.map(id => this.getOffer(id.toString())));
+      return offers.filter(Boolean);
+    } catch { return []; }
+  }
+
+  async getActiveOffers() {
+    await this._initMarketplace();
+    if (!this.marketplaceContract) return [];
+    try {
+      const ids = await this.marketplaceContract.getActiveOfferIds();
+      const offers = await Promise.all(ids.map(id => this.getOffer(id.toString())));
+      return offers.filter(Boolean);
+    } catch { return []; }
+  }
+
+  async getLenderOffers(address) {
+    await this._initMarketplace();
+    if (!this.marketplaceContract) return [];
+    try {
+      const ids = await this.marketplaceContract.getLenderOfferIds(address || this.address);
+      const offers = await Promise.all(ids.map(id => this.getOffer(id.toString())));
+      return offers.filter(Boolean);
+    } catch { return []; }
+  }
+
+  async getOfferROI(offerId) {
+    await this._initMarketplace();
+    if (!this.marketplaceContract) return 0;
+    try {
+      const roi = await this.marketplaceContract.getEstimatedROI(offerId);
+      return (roi.toNumber() / 100).toFixed(2); // percent
+    } catch { return '0.00'; }
+  }
+
+  async checkLoanCompatibility(offerId, loanAmount, collateralType, collateralRatioBps) {
+    await this._initMarketplace();
+    if (!this.marketplaceContract) return { ok: false, reason: 'Contract not configured' };
+    try {
+      const amtBN  = ethers.utils.parseUnits(loanAmount.toString(), 6);
+      const [ok, reason] = await this.marketplaceContract.isLoanCompatible(
+        offerId, amtBN, parseInt(collateralType), parseInt(collateralRatioBps)
+      );
+      return { ok, reason };
+    } catch (e) { return { ok: false, reason: e.message }; }
   }
 }
 
