@@ -425,8 +425,8 @@ app.get('/', (c) => {
         <div class="section-sub" style="margin-bottom:0;">Manage your offers, track utilization, ROI and active loans.</div>
       </div>
       <div class="flex" style="gap:10px;">
-        <button class="btn btn-primary" onclick="showPage('lend')">
-          <i class="fa-solid fa-plus"></i> New Offer
+        <button class="btn btn-primary" onclick="showPage('marketplace')">
+          <i class="fa-solid fa-store"></i> Fund a Loan
         </button>
         <button class="btn btn-secondary" onclick="loadMyLending()">
           <i class="fa-solid fa-rotate"></i> Refresh
@@ -1094,6 +1094,27 @@ app.get('/', (c) => {
 
     <!-- ── Tab: Lending Info (on-chain) ─────────────────────────────────── -->
     <div id="lend-tab-offer-form">
+
+      <!-- ── Lender CTA Banner ─────────────────────────────────────────── -->
+      <div style="background:linear-gradient(135deg,rgba(56,189,248,0.12),rgba(99,102,241,0.12)); border:1.5px solid rgba(56,189,248,0.3); border-radius:16px; padding:28px 32px; margin-bottom:28px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px;">
+        <div>
+          <div style="font-size:20px; font-weight:800; color:var(--text-primary); margin-bottom:6px;">
+            <i class="fa-solid fa-hand-holding-dollar" style="color:#38bdf8; margin-right:10px;"></i>Ready to Lend?
+          </div>
+          <div style="font-size:14px; color:var(--text-secondary); max-width:480px;">
+            Browse open loan requests from verified borrowers and fund them directly on-chain. Set your own interest rate (1–5%/month) and start earning USDC.
+          </div>
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button class="btn btn-primary" style="padding:12px 24px; font-size:15px;" onclick="showPage('marketplace')">
+            <i class="fa-solid fa-store"></i> Browse Loan Requests
+          </button>
+          <button class="btn btn-secondary" style="padding:12px 24px; font-size:15px;" onclick="switchLendTab('loan-requests', document.querySelector('[data-lend-tab=loan-requests]'))">
+            <i class="fa-solid fa-inbox"></i> All Requests
+          </button>
+        </div>
+      </div>
+
       <div class="grid-2" style="gap:24px; align-items:start;">
 
         <!-- How-to Lend Card -->
