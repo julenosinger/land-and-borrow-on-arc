@@ -1448,12 +1448,14 @@ app.get('/', (c) => {
         <div class="card-title" style="margin-bottom:20px;"><i class="fa-solid fa-file-contract text-cyan"></i>Contract Configuration</div>
         <div class="form-section">
           <div class="form-group">
-            <label class="form-label">LoanPlatform Contract Address</label>
+            <label class="form-label">ArcFiLoanManager Contract Address</label>
             <div class="input-group">
               <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-              <input id="cfg-contract" class="form-control mono" type="text" placeholder="0x..." />
+              <input id="cfg-contract" class="form-control mono" type="text"
+                value="0x413508DBCb5Cbf86b93C09b9AE633Af8B14cEF5F"
+                placeholder="0x413508DBCb5Cbf86b93C09b9AE633Af8B14cEF5F" />
             </div>
-            <span class="field-hint">Deployed on Arc Testnet (Chain ID: 5042002)</span>
+            <span class="field-hint">✅ Deployed on Arc Testnet (Chain ID: 5042002)</span>
           </div>
           <div class="form-group">
             <label class="form-label">LoanMarketplace Contract Address</label>
@@ -1467,9 +1469,11 @@ app.get('/', (c) => {
             <label class="form-label">USDC Token Address</label>
             <div class="input-group">
               <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <input id="cfg-usdc" class="form-control mono" type="text" placeholder="0x..." />
+              <input id="cfg-usdc" class="form-control mono" type="text"
+                value="0x3600000000000000000000000000000000000000"
+                placeholder="0x3600000000000000000000000000000000000000" />
             </div>
-            <span class="field-hint">USDC contract address on Arc Testnet</span>
+            <span class="field-hint">Native USDC precompile on Arc Testnet (ERC-20 compatible)</span>
           </div>
           <div class="form-group">
             <label class="form-label">Pinata API Key <span class="opt">(for IPFS uploads)</span></label>
@@ -1495,11 +1499,11 @@ app.get('/', (c) => {
           <div class="card-title" style="margin-bottom:16px;"><i class="fa-solid fa-network-wired text-cyan"></i>Network Information</div>
           <div class="detail-row"><span class="detail-label">Network</span><span class="detail-value">Arc Testnet</span></div>
           <div class="detail-row"><span class="detail-label">Chain ID</span><span class="detail-value mono">5042002</span></div>
-          <div class="detail-row"><span class="detail-label">RPC URL</span><span class="detail-value mono text-xs">https://rpc.arc.fun</span></div>
+          <div class="detail-row"><span class="detail-label">RPC URL</span><span class="detail-value mono text-xs">https://rpc.testnet.arc.network</span></div>
           <div class="detail-row"><span class="detail-label">Explorer</span>
             <a href="https://explorer.arc.fun" target="_blank" class="underline-link">explorer.arc.fun ↗</a>
           </div>
-          <div class="detail-row"><span class="detail-label">Currency</span><span class="detail-value">ARC</span></div>
+          <div class="detail-row"><span class="detail-label">Currency</span><span class="detail-value">USDC (native gas token)</span></div>
           <button class="btn btn-secondary btn-full btn-sm" style="margin-top:14px;" onclick="addArcNetwork()">
             <i class="fa-solid fa-plus"></i> Add Arc Network to Wallet
           </button>

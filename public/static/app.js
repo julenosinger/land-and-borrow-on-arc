@@ -829,8 +829,9 @@ function openApproveLoanModal(loanId) {
 async function doApproveLoan(loanId, ratePct, days) {
   const toast = showToast('Approving loan…', 'info', 0);
   try {
-    const rateBps = Math.round(ratePct * 100);
-    await window.web3.approveLoan(loanId, rateBps, days);
+    // Contract expects integer % (1-5), not basis points
+    const rateInt = Math.round(ratePct);
+    await window.web3.approveLoan(loanId, rateInt);
     toast.remove?.();
     showToast(`Loan #${loanId} approved at ${ratePct}%/month!`, 'success');
     loadLenderLoans();

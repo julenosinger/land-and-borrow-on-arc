@@ -1,18 +1,31 @@
 /**
- * Web3Manager - Handles wallet connections and blockchain interactions for Arc Testnet
- * Supports MetaMask and WalletConnect-compatible wallets
+ * Web3Manager — ArcFi v2.1
+ * Handles wallet connections and blockchain interactions for Arc Testnet.
+ * Compatible with ArcFiLoanManager v1.0.0 (deployed at CONTRACT_ADDRESS).
+ *
+ * Arc Testnet details:
+ *   Chain ID : 5042002
+ *   RPC      : https://rpc.testnet.arc.network
+ *   Native   : USDC (ERC-20 precompile at 0x3600…0000)
+ *   Explorer : https://explorer.arc.fun
+ *
+ * ethers.js : v5 (loaded via CDN — ethers@5.7.2)
  */
 
 class Web3Manager {
   constructor() {
-    this.provider = null;
-    this.signer = null;
-    this.address = null;
-    this.contract = null;
-    this.usdcContract = null;
-    this.chainId = null;
-    this.listeners = {};
+    this.provider        = null;
+    this.signer          = null;
+    this.address         = null;
+    this.contract        = null;   // ArcFiLoanManager
+    this.usdcContract    = null;   // USDC ERC-20
+    this.chainId         = null;
+    this.listeners       = {};
   }
+
+  // ─────────────────────────────────────────────────────────────────────
+  //  Lightweight event emitter
+  // ─────────────────────────────────────────────────────────────────────
 
   on(event, cb) {
     if (!this.listeners[event]) this.listeners[event] = [];
@@ -23,19 +36,22 @@ class Web3Manager {
     (this.listeners[event] || []).forEach(cb => cb(data));
   }
 
+  // ─────────────────────────────────────────────────────────────────────
+  //  Wallet connection
+  // ─────────────────────────────────────────────────────────────────────
+
   async connectWallet() {
     if (!window.ethereum) {
-      throw new Error('No Web3 wallet detected. Please install MetaMask or a compatible wallet.');
+      throw new Error('No Web3 wallet detected. Install MetaMask or a compatible wallet.');
     }
     try {
-      // Request accounts
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (!accounts || accounts.length === 0) throw new Error('No accounts found');
+      if (!accounts || accounts.length === 0) throw new Error('No accounts returned');
 
       await this._setupProvider();
       await this._ensureArcNetwork();
 
-      this.address = accounts[0];
+      this.address = await this.signer.getAddress();
       this.emit('connected', { address: this.address, chainId: this.chainId });
       this._setupEventListeners();
       return this.address;
@@ -45,21 +61,22 @@ class Web3Manager {
   }
 
   async _setupProvider() {
+    // ethers v5 — loaded via CDN as window.ethers
     this.provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
-    this.signer = this.provider.getSigner();
+    this.signer   = this.provider.getSigner();
     const network = await this.provider.getNetwork();
-    this.chainId = network.chainId;
+    this.chainId  = network.chainId;
 
-    // Initialize contracts if addresses are set
-    if (window.CONTRACT_ADDRESS && window.CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
-      this.contract = new ethers.Contract(window.CONTRACT_ADDRESS, window.LOAN_ABI, this.signer);
+    // ── Main lending contract ──────────────────────────────────────────
+    const contractAddr = window.CONTRACT_ADDRESS;
+    if (contractAddr && contractAddr !== '0x0000000000000000000000000000000000000000') {
+      this.contract = new ethers.Contract(contractAddr, window.LOAN_ABI, this.signer);
     }
-    if (window.USDC_ADDRESS && window.USDC_ADDRESS !== '0x0000000000000000000000000000000000000000') {
-      this.usdcContract = new ethers.Contract(window.USDC_ADDRESS, window.ERC20_ABI, this.signer);
-    }
-    const mktAddr = window.MARKETPLACE_ADDRESS || window.MARKETPLACE_CONTRACT_ADDRESS || '';
-    if (mktAddr && mktAddr !== '0x0000000000000000000000000000000000000000') {
-      this.marketplaceContract = new ethers.Contract(mktAddr, window.MARKETPLACE_ABI, this.signer);
+
+    // ── USDC ERC-20 ────────────────────────────────────────────────────
+    const usdcAddr = window.USDC_ADDRESS;
+    if (usdcAddr && usdcAddr !== '0x0000000000000000000000000000000000000000') {
+      this.usdcContract = new ethers.Contract(usdcAddr, window.ERC20_ABI, this.signer);
     }
   }
 
@@ -71,21 +88,21 @@ class Web3Manager {
   }
 
   async _switchToArcNetwork() {
+    const hexChainId = ethers.utils.hexValue(window.ARC_CHAIN_ID);
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: ethers.utils.hexValue(window.ARC_CHAIN_ID) }]
+        params: [{ chainId: hexChainId }]
       });
     } catch (switchError) {
-      // Chain not added - add it
       if (switchError.code === 4902) {
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
           params: [{
-            chainId: ethers.utils.hexValue(window.ARC_CHAIN_ID),
-            chainName: 'Arc Testnet',
-            nativeCurrency: { name: 'ARC', symbol: 'ARC', decimals: 18 },
-            rpcUrls: [window.ARC_RPC_URL],
+            chainId:           hexChainId,
+            chainName:         'Arc Testnet',
+            nativeCurrency:    { name: 'USDC', symbol: 'USDC', decimals: 6 },
+            rpcUrls:           [window.ARC_RPC_URL],
             blockExplorerUrls: [window.ARC_EXPLORER]
           }]
         });
@@ -93,7 +110,6 @@ class Web3Manager {
         throw switchError;
       }
     }
-    // Refresh provider after switch
     await this._setupProvider();
   }
 
@@ -116,338 +132,34 @@ class Web3Manager {
     });
   }
 
-  isConnected() {
-    return !!this.address;
-  }
+  // ─────────────────────────────────────────────────────────────────────
+  //  Guards & Helpers
+  // ─────────────────────────────────────────────────────────────────────
+
+  isConnected() { return !!this.address; }
 
   requireConnection() {
-    if (!this.isConnected()) throw new Error('Please connect your wallet first');
+    if (!this.isConnected()) throw new Error('Please connect your wallet first.');
   }
 
   requireArcNetwork() {
-    if (this.chainId !== window.ARC_CHAIN_ID) throw new Error(`Please switch to Arc Testnet (Chain ID: ${window.ARC_CHAIN_ID})`);
+    if (this.chainId !== window.ARC_CHAIN_ID) {
+      throw new Error(`Please switch to Arc Testnet (Chain ID: ${window.ARC_CHAIN_ID})`);
+    }
+  }
+
+  requireContract() {
+    if (!this.contract) throw new Error('Contract not initialized. Check Settings → Contract Address.');
+  }
+
+  requireUSDC() {
+    if (!this.usdcContract) throw new Error('USDC contract not initialized. Check Settings → USDC Address.');
   }
 
   getShortAddress(addr) {
     const a = addr || this.address;
     if (!a) return '';
-    return `${a.slice(0, 6)}...${a.slice(-4)}`;
-  }
-
-  async getUSDCBalance(address) {
-    if (!this.usdcContract) return '0';
-    try {
-      const bal = await this.usdcContract.balanceOf(address || this.address);
-      return ethers.utils.formatUnits(bal, 6);
-    } catch { return '0'; }
-  }
-
-  async approveUSDC(spender, amount) {
-    this.requireConnection();
-    if (!this.usdcContract) throw new Error('USDC contract not initialized');
-    const amountBN = ethers.utils.parseUnits(amount.toString(), 6);
-    const tx = await this.usdcContract.approve(spender, amountBN);
-    await tx.wait();
-    return tx;
-  }
-
-  async approveCollateralToken(tokenAddress, spender, amount) {
-    this.requireConnection();
-    const tokenContract = new ethers.Contract(tokenAddress, window.ERC20_ABI, this.signer);
-    const decimals = await tokenContract.decimals();
-    const amountBN = ethers.utils.parseUnits(amount.toString(), decimals);
-    const tx = await tokenContract.approve(spender, amountBN);
-    await tx.wait();
-    return tx;
-  }
-
-  // ─── Loan Operations ───────────────────────────────────────────────────────
-  async createLoanWithRWA(borrowerInfo, principalAmount, installments, collateralData) {
-    this.requireConnection();
-    this.requireArcNetwork();
-    if (!this.contract) throw new Error('Contract not initialized. Deploy the contract first.');
-
-    const amountBN = ethers.utils.parseUnits(principalAmount.toString(), 6);
-    const valueBN = ethers.utils.parseUnits(collateralData.estimatedValueUSD.toString(), 6);
-
-    const tx = await this.contract.createLoanWithRWA(
-      [borrowerInfo.fullName, borrowerInfo.email, borrowerInfo.country, borrowerInfo.city, borrowerInfo.employmentStatus || ''],
-      amountBN,
-      parseInt(installments),
-      collateralData.assetType,
-      collateralData.description,
-      valueBN,
-      collateralData.jurisdiction,
-      collateralData.documentHash,
-      collateralData.documentURI || ''
-    );
-    const receipt = await tx.wait();
-    const event = receipt.events?.find(e => e.event === 'LoanCreated');
-    const loanId = event?.args?.loanId?.toString();
-    return { tx, receipt, loanId };
-  }
-
-  async createLoanWithCrypto(borrowerInfo, principalAmount, installments, collateralData) {
-    this.requireConnection();
-    this.requireArcNetwork();
-    if (!this.contract) throw new Error('Contract not initialized. Deploy the contract first.');
-
-    const amountBN = ethers.utils.parseUnits(principalAmount.toString(), 6);
-    const tokenContract = new ethers.Contract(collateralData.tokenAddress, window.ERC20_ABI, this.signer);
-    const decimals = await tokenContract.decimals();
-    const collateralBN = ethers.utils.parseUnits(collateralData.amount.toString(), decimals);
-
-    // Approve collateral transfer first
-    const approveTx = await tokenContract.approve(window.CONTRACT_ADDRESS, collateralBN);
-    await approveTx.wait();
-    UI.showToast('Collateral approved ✓', 'success');
-
-    const tx = await this.contract.createLoanWithCrypto(
-      [borrowerInfo.fullName, borrowerInfo.email, borrowerInfo.country, borrowerInfo.city, borrowerInfo.employmentStatus || ''],
-      amountBN,
-      parseInt(installments),
-      collateralData.tokenAddress,
-      collateralBN,
-      parseInt(collateralData.ratioBps)
-    );
-    const receipt = await tx.wait();
-    const event = receipt.events?.find(e => e.event === 'LoanCreated');
-    const loanId = event?.args?.loanId?.toString();
-    return { tx, receipt, loanId };
-  }
-
-  async approveLoan(loanId, interestRateBps, installmentDays) {
-    this.requireConnection();
-    this.requireArcNetwork();
-    if (!this.contract) throw new Error('Contract not initialized');
-    const tx = await this.contract.approveLoan(loanId, interestRateBps, installmentDays);
-    return await tx.wait();
-  }
-
-  async rejectLoan(loanId) {
-    this.requireConnection();
-    if (!this.contract) throw new Error('Contract not initialized');
-    const tx = await this.contract.rejectLoan(loanId);
-    return await tx.wait();
-  }
-
-  async verifyRWA(loanId) {
-    this.requireConnection();
-    if (!this.contract) throw new Error('Contract not initialized');
-    const tx = await this.contract.verifyRWA(loanId);
-    return await tx.wait();
-  }
-
-  async disburseLoan(loanId, amount) {
-    this.requireConnection();
-    this.requireArcNetwork();
-    if (!this.contract) throw new Error('Contract not initialized');
-    // Approve USDC first
-    const amountBN = ethers.utils.parseUnits(amount.toString(), 6);
-    const approveTx = await this.usdcContract.approve(window.CONTRACT_ADDRESS, amountBN);
-    await approveTx.wait();
-    UI.showToast('USDC approved ✓', 'success');
-
-    const tx = await this.contract.disburseLoan(loanId);
-    return await tx.wait();
-  }
-
-  async payInstallment(loanId, installmentIndex, installmentAmount) {
-    this.requireConnection();
-    this.requireArcNetwork();
-    if (!this.contract) throw new Error('Contract not initialized');
-
-    const amountBN = ethers.utils.parseUnits(installmentAmount.toString(), 6);
-    const approveTx = await this.usdcContract.approve(window.CONTRACT_ADDRESS, amountBN);
-    await approveTx.wait();
-    UI.showToast('USDC approved ✓', 'success');
-
-    const txHash = ethers.utils.id(`${loanId}-${installmentIndex}-${Date.now()}`);
-    const tx = await this.contract.payInstallment(loanId, installmentIndex, txHash);
-    const receipt = await tx.wait();
-    return { tx, receipt, txHash: tx.hash };
-  }
-
-  async payNextInstallment(loanId, installmentAmount) {
-    this.requireConnection();
-    this.requireArcNetwork();
-    if (!this.contract) throw new Error('Contract not initialized');
-
-    const amountBN = ethers.utils.parseUnits(installmentAmount.toString(), 6);
-    const approveTx = await this.usdcContract.approve(window.CONTRACT_ADDRESS, amountBN);
-    await approveTx.wait();
-
-    const txHash = ethers.utils.id(`next-${loanId}-${Date.now()}`);
-    const tx = await this.contract.payNextInstallment(loanId, txHash);
-    const receipt = await tx.wait();
-    return { tx, receipt, txHash: tx.hash };
-  }
-
-  async cancelLoan(loanId) {
-    this.requireConnection();
-    if (!this.contract) throw new Error('Contract not initialized');
-    const tx = await this.contract.cancelLoan(loanId);
-    return await tx.wait();
-  }
-
-  async liquidateCollateral(loanId) {
-    this.requireConnection();
-    if (!this.contract) throw new Error('Contract not initialized');
-    const tx = await this.contract.liquidateCollateral(loanId);
-    return await tx.wait();
-  }
-
-  // ─── Read Operations ───────────────────────────────────────────────────────
-  async getAllLoans() {
-    if (!this.contract) return [];
-    try {
-      const ids = await this.contract.getAllLoanIds();
-      const loans = await Promise.all(ids.map(id => this.getLoanFull(id.toString())));
-      return loans.filter(Boolean);
-    } catch { return []; }
-  }
-
-  async getLoanFull(loanId) {
-    if (!this.contract) return null;
-    try {
-      const [basic, collateral, borrowerInfo, installments] = await Promise.all([
-        this.contract.getLoanBasic(loanId),
-        this.contract.getCollateral(loanId),
-        this.contract.getBorrowerInfo(loanId),
-        this.contract.getLoanInstallments(loanId)
-      ]);
-      return {
-        id: basic.id.toString(),
-        borrower: basic.borrower,
-        lender: basic.lender,
-        principalAmount: ethers.utils.formatUnits(basic.principalAmount, 6),
-        interestRateMonthly: basic.interestRateMonthly.toNumber(),
-        totalInstallments: basic.totalInstallments.toNumber(),
-        installmentAmount: ethers.utils.formatUnits(basic.installmentAmount, 6),
-        totalRepayable: ethers.utils.formatUnits(basic.totalRepayable, 6),
-        paidInstallments: basic.paidInstallments.toNumber(),
-        disbursedAt: basic.disbursedAt.toNumber(),
-        createdAt: basic.createdAt.toNumber(),
-        status: basic.status,
-        statusLabel: window.LOAN_STATUS[basic.status],
-        collateral: {
-          colType: collateral.colType,
-          colTypeLabel: window.COLLATERAL_TYPE[collateral.colType],
-          assetType: collateral.assetType,
-          description: collateral.description,
-          estimatedValueUSD: collateral.estimatedValueUSD ? ethers.utils.formatUnits(collateral.estimatedValueUSD, 6) : '0',
-          jurisdiction: collateral.jurisdiction,
-          documentHash: collateral.documentHash,
-          documentURI: collateral.documentURI,
-          rwaVerified: collateral.rwaVerified,
-          cryptoToken: collateral.cryptoToken,
-          cryptoAmount: collateral.cryptoAmount ? ethers.utils.formatUnits(collateral.cryptoAmount, 6) : '0',
-          collateralRatio: collateral.collateralRatio.toNumber(),
-          cryptoLocked: collateral.cryptoLocked
-        },
-        borrowerInfo: {
-          fullName: borrowerInfo.fullName,
-          email: borrowerInfo.email,
-          country: borrowerInfo.country,
-          city: borrowerInfo.city,
-          employmentStatus: borrowerInfo.employmentStatus
-        },
-        installments: installments.map((inst, idx) => ({
-          index: idx,
-          amount: ethers.utils.formatUnits(inst.amount, 6),
-          dueDate: inst.dueDate.toNumber(),
-          paidDate: inst.paidDate.toNumber(),
-          txHash: inst.txHash,
-          status: inst.status,
-          statusLabel: window.INSTALLMENT_STATUS[inst.status]
-        }))
-      };
-    } catch (e) {
-      console.error('getLoanFull error:', e);
-      return null;
-    }
-  }
-
-  async getBorrowerLoans(address) {
-    if (!this.contract) return [];
-    try {
-      const ids = await this.contract.getBorrowerLoans(address || this.address);
-      return Promise.all(ids.map(id => this.getLoanFull(id.toString())));
-    } catch { return []; }
-  }
-
-  async getLenderLoans(address) {
-    if (!this.contract) return [];
-    try {
-      const ids = await this.contract.getLenderLoans(address || this.address);
-      return Promise.all(ids.map(id => this.getLoanFull(id.toString())));
-    } catch { return []; }
-  }
-
-  async getRemainingAmount(loanId) {
-    if (!this.contract) return '0';
-    try {
-      const amt = await this.contract.getRemainingAmount(loanId);
-      return ethers.utils.formatUnits(amt, 6);
-    } catch { return '0'; }
-  }
-
-  async getNextPendingInstallment(loanId) {
-    if (!this.contract) return null;
-    try {
-      const result = await this.contract.getNextPendingInstallment(loanId);
-      return {
-        index: result.index.toNumber(),
-        amount: ethers.utils.formatUnits(result.amount, 6),
-        dueDate: result.dueDate.toNumber(),
-        status: result.status
-      };
-    } catch { return null; }
-  }
-
-  // ─── IPFS Upload ───────────────────────────────────────────────────────────
-  async uploadToIPFS(file) {
-    // Use Pinata public API or nft.storage free tier
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-      const resp = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-        method: 'POST',
-        headers: {
-          'pinata_api_key': window.PINATA_API_KEY || '',
-          'pinata_secret_api_key': window.PINATA_SECRET_KEY || ''
-        },
-        body: formData
-      });
-      if (!resp.ok) throw new Error('IPFS upload failed');
-      const data = await resp.json();
-      return {
-        hash: data.IpfsHash,
-        uri: `ipfs://${data.IpfsHash}`,
-        url: `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`
-      };
-    } catch {
-      // Fallback: compute file hash locally for demo (document hash only)
-      const buffer = await file.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return {
-        hash: hashHex,
-        uri: `file://${file.name}`,
-        url: null,
-        localOnly: true
-      };
-    }
-  }
-
-  async hashFile(file) {
-    const buffer = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
+    return `${a.slice(0, 6)}…${a.slice(-4)}`;
   }
 
   formatUSD(amount) {
@@ -469,219 +181,556 @@ class Web3Manager {
     });
   }
 
-  // ─── Marketplace Operations ────────────────────────────────────────────────
-  async _initMarketplace() {
-    if (this.marketplaceContract) return;
-    const addr = window.MARKETPLACE_ADDRESS || window.MARKETPLACE_CONTRACT_ADDRESS || '';
-    if (addr && addr !== '0x0000000000000000000000000000000000000000' && this.signer) {
-      this.marketplaceContract = new ethers.Contract(addr, window.MARKETPLACE_ABI, this.signer);
-    }
+  // ─────────────────────────────────────────────────────────────────────
+  //  USDC Operations
+  // ─────────────────────────────────────────────────────────────────────
+
+  async getUSDCBalance(address) {
+    try {
+      const target = address || this.address;
+      if (this.usdcContract) {
+        const bal = await this.usdcContract.balanceOf(target);
+        return ethers.utils.formatUnits(bal, 6);
+      }
+      if (this.provider) {
+        const usdcRO = new ethers.Contract(window.USDC_ADDRESS, window.ERC20_ABI, this.provider);
+        const bal = await usdcRO.balanceOf(target);
+        return ethers.utils.formatUnits(bal, 6);
+      }
+      return '0';
+    } catch { return '0'; }
   }
 
-  async createOffer({
-    lenderName, lenderType, liquidityAmount, interestRateBps, maxInstallments,
-    minLoanAmount, maxLoanAmount, acceptedCollateral, minCollateralRatioBps,
-    geoRestrictions, borrowerPreferences
-  }) {
+  /**
+   * Approve the lending contract to spend USDC on the caller's behalf.
+   * @param {string|number} amount USDC amount (human-readable, e.g. "1000")
+   */
+  async approveUSDC(amount) {
+    this.requireConnection();
+    this.requireUSDC();
+    const amountBN = ethers.utils.parseUnits(amount.toString(), 6);
+    const tx = await this.usdcContract.approve(window.CONTRACT_ADDRESS, amountBN);
+    await tx.wait();
+    return tx;
+  }
+
+  async getUSDCAllowance(owner, spender) {
+    try {
+      if (!this.usdcContract) return '0';
+      const al = await this.usdcContract.allowance(owner, spender || window.CONTRACT_ADDRESS);
+      return ethers.utils.formatUnits(al, 6);
+    } catch { return '0'; }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  //  Loan Write Operations
+  // ─────────────────────────────────────────────────────────────────────
+
+  /**
+   * Create a loan request with RWA collateral.
+   * On-chain: createLoanRequest(principal, installments, 0, collateralReference)
+   *
+   * @param {object} borrowerInfo  { fullName, email, country, city, employmentStatus }
+   * @param {string|number} principalAmount  USDC (human-readable, e.g. "1000")
+   * @param {string|number} installments     1–10
+   * @param {object} collateralData  { assetType, description, estimatedValueUSD,
+   *                                   jurisdiction, documentHash, documentURI }
+   * @returns {{ tx, receipt, loanId }}
+   */
+  async createLoanWithRWA(borrowerInfo, principalAmount, installments, collateralData) {
     this.requireConnection();
     this.requireArcNetwork();
-    await this._initMarketplace();
-    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured. Add address in Settings.');
+    this.requireContract();
 
-    const liquidityBN      = ethers.utils.parseUnits(liquidityAmount.toString(), 6);
-    const minLoanBN        = ethers.utils.parseUnits(minLoanAmount.toString(), 6);
-    const maxLoanBN        = ethers.utils.parseUnits(maxLoanAmount.toString(), 6);
+    const principalBN = ethers.utils.parseUnits(principalAmount.toString(), 6);
 
-    // Approve USDC for marketplace
-    if (!this.usdcContract) throw new Error('USDC contract not initialized');
-    const approveTx = await this.usdcContract.approve(
-      window.MARKETPLACE_ADDRESS, liquidityBN
-    );
-    await approveTx.wait();
+    // Pack all metadata into a JSON string stored on-chain as collateralReference
+    const colRef = JSON.stringify({
+      type:         collateralData.assetType    || 'RWA',
+      description:  collateralData.description  || '',
+      valueUSD:     collateralData.estimatedValueUSD || '0',
+      jurisdiction: collateralData.jurisdiction || '',
+      docHash:      collateralData.documentHash || '',
+      docURI:       collateralData.documentURI  || '',
+      borrower: {
+        name:       borrowerInfo.fullName,
+        email:      borrowerInfo.email,
+        country:    borrowerInfo.country,
+        city:       borrowerInfo.city,
+        employment: borrowerInfo.employmentStatus || ''
+      }
+    });
 
-    const tx = await this.marketplaceContract.createOffer(
-      lenderName,
-      parseInt(lenderType),
-      liquidityBN,
-      parseInt(interestRateBps),
-      parseInt(maxInstallments),
-      minLoanBN,
-      maxLoanBN,
-      parseInt(acceptedCollateral),
-      parseInt(minCollateralRatioBps),
-      geoRestrictions || 'GLOBAL',
-      borrowerPreferences || ''
+    const tx      = await this.contract.createLoanRequest(
+      principalBN,
+      parseInt(installments),
+      0,        // CollateralType.RWA
+      colRef
     );
     const receipt = await tx.wait();
-    const event = receipt.events?.find(e => e.event === 'OfferCreated');
-    const offerId = event?.args?.offerId?.toString();
-    return { tx, receipt, offerId };
+
+    const loanId  = this._parseLoanId(receipt, 'LoanCreated');
+    return { tx, receipt, loanId };
   }
 
-  async updateOffer(offerId, params) {
+  /**
+   * Create a loan request with Crypto collateral.
+   * On-chain: createLoanRequest(principal, installments, 1, collateralReference)
+   *
+   * @param {object} borrowerInfo  { fullName, email, country, city, employmentStatus }
+   * @param {string|number} principalAmount  USDC (human-readable)
+   * @param {string|number} installments     1–10
+   * @param {object} collateralData  { tokenAddress, amount, ratioBps }
+   * @returns {{ tx, receipt, loanId }}
+   */
+  async createLoanWithCrypto(borrowerInfo, principalAmount, installments, collateralData) {
     this.requireConnection();
-    await this._initMarketplace();
-    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
-    const minLoanBN = ethers.utils.parseUnits(params.minLoanAmount.toString(), 6);
-    const maxLoanBN = ethers.utils.parseUnits(params.maxLoanAmount.toString(), 6);
-    const tx = await this.marketplaceContract.updateOffer(
-      offerId, parseInt(params.interestRateBps), parseInt(params.maxInstallments),
-      minLoanBN, maxLoanBN, parseInt(params.acceptedCollateral),
-      parseInt(params.minCollateralRatioBps), params.geoRestrictions || 'GLOBAL',
-      params.borrowerPreferences || ''
+    this.requireArcNetwork();
+    this.requireContract();
+
+    const principalBN = ethers.utils.parseUnits(principalAmount.toString(), 6);
+
+    const colRef = JSON.stringify({
+      token:    collateralData.tokenAddress || window.USDC_ADDRESS,
+      amount:   collateralData.amount,
+      ratioBps: collateralData.ratioBps,
+      borrower: {
+        name:       borrowerInfo.fullName,
+        email:      borrowerInfo.email,
+        country:    borrowerInfo.country,
+        city:       borrowerInfo.city,
+        employment: borrowerInfo.employmentStatus || ''
+      }
+    });
+
+    const tx      = await this.contract.createLoanRequest(
+      principalBN,
+      parseInt(installments),
+      1,        // CollateralType.CRYPTO
+      colRef
     );
+    const receipt = await tx.wait();
+
+    const loanId  = this._parseLoanId(receipt, 'LoanCreated');
+    return { tx, receipt, loanId };
+  }
+
+  /**
+   * Lender approves a loan and sets the interest rate.
+   * On-chain: approveLoan(loanId, interestRate) — interestRate is integer % (1–5)
+   *
+   * @param {string|number} loanId
+   * @param {number} interestRatePct  Monthly rate as integer percent (1–5)
+   */
+  async approveLoan(loanId, interestRatePct) {
+    this.requireConnection();
+    this.requireArcNetwork();
+    this.requireContract();
+
+    // Guard: contract requires integer 1–5
+    const rateInt = Math.round(Number(interestRatePct));
+    if (rateInt < 1 || rateInt > 5) {
+      throw new Error(`Interest rate must be 1–5% per month (received: ${interestRatePct})`);
+    }
+
+    const tx = await this.contract.approveLoan(loanId, rateInt);
     return await tx.wait();
   }
 
-  async pauseOffer(offerId) {
+  /**
+   * Lender funds an approved loan.
+   * Flow: approve USDC allowance → call fundLoan()
+   *
+   * @param {string|number} loanId
+   * @param {string|number} principalAmount  USDC (human-readable)
+   * @returns {{ tx, receipt }}
+   */
+  async fundLoan(loanId, principalAmount) {
     this.requireConnection();
-    await this._initMarketplace();
-    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
-    const tx = await this.marketplaceContract.pauseOffer(offerId);
-    return await tx.wait();
-  }
+    this.requireArcNetwork();
+    this.requireContract();
+    this.requireUSDC();
 
-  async resumeOffer(offerId) {
-    this.requireConnection();
-    await this._initMarketplace();
-    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
-    const tx = await this.marketplaceContract.resumeOffer(offerId);
-    return await tx.wait();
-  }
+    const amountBN = ethers.utils.parseUnits(principalAmount.toString(), 6);
 
-  async addLiquidity(offerId, amount) {
-    this.requireConnection();
-    await this._initMarketplace();
-    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
-    const amtBN = ethers.utils.parseUnits(amount.toString(), 6);
-    const approveTx = await this.usdcContract.approve(window.MARKETPLACE_ADDRESS, amtBN);
+    // Step 1 — Approve USDC transfer from lender to contract
+    const approveToast = typeof showToast === 'function'
+      ? showToast('Step 1/2 — Approving USDC…', 'info', 0) : null;
+    const approveTx = await this.usdcContract.approve(window.CONTRACT_ADDRESS, amountBN);
     await approveTx.wait();
-    const tx = await this.marketplaceContract.addLiquidity(offerId, amtBN);
-    return await tx.wait();
+    approveToast?.remove?.();
+    if (typeof showToast === 'function') showToast('USDC approved ✓', 'success', 2000);
+
+    // Step 2 — Fund the loan (USDC transferred: lender → borrower)
+    const fundToast = typeof showToast === 'function'
+      ? showToast('Step 2/2 — Funding loan…', 'info', 0) : null;
+    const tx      = await this.contract.fundLoan(loanId);
+    const receipt = await tx.wait();
+    fundToast?.remove?.();
+
+    return { tx, receipt };
   }
 
-  async withdrawLiquidity(offerId, amount) {
+  /**
+   * Alias: disburseLoan → fundLoan (backward-compat with app.js).
+   */
+  async disburseLoan(loanId, principalAmount) {
+    return this.fundLoan(loanId, principalAmount);
+  }
+
+  /**
+   * Borrower repays one installment.
+   * Flow: approve USDC allowance (installmentAmount) → call repayInstallment()
+   * The contract itself determines the exact amount (handles rounding on last installment).
+   *
+   * @param {string|number} loanId
+   * @param {string|number} installmentAmount  USDC (human-readable) — used for approval
+   * @returns {{ tx, receipt, txHash }}
+   */
+  async payInstallment(loanId, installmentIndex, installmentAmount) {
+    return this._repayInstallment(loanId, installmentAmount);
+  }
+
+  async payNextInstallment(loanId, installmentAmount) {
+    return this._repayInstallment(loanId, installmentAmount);
+  }
+
+  async _repayInstallment(loanId, installmentAmount) {
     this.requireConnection();
-    await this._initMarketplace();
-    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
-    const amtBN = ethers.utils.parseUnits(amount.toString(), 6);
-    const tx = await this.marketplaceContract.withdrawLiquidity(offerId, amtBN);
-    return await tx.wait();
-  }
+    this.requireArcNetwork();
+    this.requireContract();
+    this.requireUSDC();
 
-  async closeOffer(offerId) {
-    this.requireConnection();
-    await this._initMarketplace();
-    if (!this.marketplaceContract) throw new Error('Marketplace contract not configured');
-    const tx = await this.marketplaceContract.closeOffer(offerId);
-    return await tx.wait();
-  }
-
-  async getOffer(offerId) {
-    await this._initMarketplace();
-    if (!this.marketplaceContract) return null;
+    // Fetch exact remaining amount from contract to avoid rounding errors
+    let payAmountBN;
     try {
-      const r = await this.marketplaceContract.getOffer(offerId);
-      return {
-        id:                 r.id.toString(),
-        lender:             r.lender,
-        lenderName:         r.lenderName,
-        lenderType:         r.lenderType,
-        lenderTypeLabel:    window.LENDER_TYPE[r.lenderType] || 'Individual',
-        totalLiquidity:     ethers.utils.formatUnits(r.totalLiquidity, 6),
-        availableLiquidity: ethers.utils.formatUnits(r.availableLiquidity, 6),
-        allocatedLiquidity: ethers.utils.formatUnits(r.allocatedLiquidity, 6),
-        interestRateBps:    r.interestRateBps.toNumber(),
-        interestRatePct:    (r.interestRateBps.toNumber() / 100).toFixed(2),
-        maxInstallments:    r.maxInstallments.toNumber(),
-        minLoanAmount:      ethers.utils.formatUnits(r.minLoanAmount, 6),
-        maxLoanAmount:      ethers.utils.formatUnits(r.maxLoanAmount, 6),
-        acceptedCollateral: r.acceptedCollateral,
-        collateralLabel:    window.COLLATERAL_PREF[r.acceptedCollateral] || 'Both',
-        minCollateralRatioBps: r.minCollateralRatioBps.toNumber(),
-        minCollateralRatioPct: (r.minCollateralRatioBps.toNumber() / 100).toFixed(0),
-        geoRestrictions:    r.geoRestrictions,
-        status:             r.status,
-        statusLabel:        window.OFFER_STATUS[r.status] || 'ACTIVE',
-        createdAt:          r.createdAt.toNumber(),
-        totalLoansIssued:   r.totalLoansIssued.toNumber(),
-        totalRepaid:        ethers.utils.formatUnits(r.totalRepaid, 6),
-        utilizationRate: r.totalLiquidity.gt(0)
-          ? Math.round((r.allocatedLiquidity.toNumber() / r.totalLiquidity.toNumber()) * 100)
-          : 0,
-        riskLevel: this._calcRiskLevel(r)
-      };
+      const [remaining] = await this.contract.getRemainingAmount(loanId);
+      const loan        = await this.contract.getLoan(loanId);
+      const instLeft    = loan.totalInstallments.sub(loan.installmentsPaid);
+
+      // If last installment, use exact remaining; otherwise use installmentAmount
+      if (instLeft.eq(1)) {
+        payAmountBN = remaining;
+      } else {
+        payAmountBN = loan.installmentAmount;
+      }
+    } catch {
+      // Fallback: use caller-supplied amount
+      payAmountBN = ethers.utils.parseUnits(
+        (installmentAmount || '0').toString(), 6
+      );
+    }
+
+    // Step 1 — Approve
+    const approveToast = typeof showToast === 'function'
+      ? showToast('Step 1/2 — Approving USDC…', 'info', 0) : null;
+    const approveTx = await this.usdcContract.approve(window.CONTRACT_ADDRESS, payAmountBN);
+    await approveTx.wait();
+    approveToast?.remove?.();
+    if (typeof showToast === 'function') showToast('USDC approved ✓', 'success', 2000);
+
+    // Step 2 — Repay
+    const repayToast = typeof showToast === 'function'
+      ? showToast('Step 2/2 — Sending repayment…', 'info', 0) : null;
+    const tx      = await this.contract.repayInstallment(loanId);
+    const receipt = await tx.wait();
+    repayToast?.remove?.();
+
+    return { tx, receipt, txHash: tx.hash };
+  }
+
+  /**
+   * Lender marks an Active loan as Defaulted.
+   * Note: ArcFiLoanManager v1 has no "reject" function — rejection is not supported.
+   * Use this only on Active loans.
+   * @param {string|number} loanId
+   */
+  async markLoanDefaulted(loanId) {
+    this.requireConnection();
+    this.requireContract();
+    const tx = await this.contract.markDefaulted(loanId);
+    return await tx.wait();
+  }
+
+  /**
+   * rejectLoan — NOT available in ArcFiLoanManager v1.
+   * There is no on-chain rejection function. Inform the user.
+   */
+  async rejectLoan(loanId) {
+    throw new Error(
+      'Loan rejection is not available in ArcFiLoanManager v1. ' +
+      'Requested loans that are never funded will simply remain pending until the borrower withdraws.'
+    );
+  }
+
+  /**
+   * cancelLoan — NOT available in ArcFiLoanManager v1.
+   * Inform the user they should contact their lender.
+   */
+  async cancelLoan(loanId) {
+    throw new Error(
+      'Loan cancellation is not supported on-chain. ' +
+      'If the loan has not been funded yet, please contact your lender.'
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  //  Loan Read Operations
+  // ─────────────────────────────────────────────────────────────────────
+
+  /**
+   * Get normalised loan object for a given loanId.
+   * Maps raw contract struct → format expected by the frontend.
+   */
+  async getLoanFull(loanId) {
+    if (!this.contract) return null;
+    try {
+      const raw = await this.contract.getLoan(loanId);
+      return this._normalizeLoan(raw);
     } catch (e) {
-      console.error('getOffer error:', e);
+      console.warn('getLoanFull error for', loanId, '—', e.message);
       return null;
     }
   }
 
-  _calcRiskLevel(offerRaw) {
-    const colPref = offerRaw.acceptedCollateral;
-    const ratio   = offerRaw.minCollateralRatioBps?.toNumber ? offerRaw.minCollateralRatioBps.toNumber() : 12000;
-    // RWA only → medium (off-chain enforcement)
-    if (colPref === 1) return 'Medium';
-    // Crypto with high ratio → Low
-    if (colPref === 2 && ratio >= 15000) return 'Low';
-    if (colPref === 2) return 'Medium';
-    // Both → depends on ratio
-    if (ratio >= 15000) return 'Low';
-    if (ratio >= 12000) return 'Medium';
-    return 'High';
+  /**
+   * Normalise raw Solidity struct → frontend-friendly object.
+   * Handles ethers v5 BigNumber and enum fields.
+   *
+   * Struct fields (ArcFiLoanManager.Loan):
+   *   id, borrower, lender, principal, interestRate, totalRepayment,
+   *   installmentAmount, totalInstallments, installmentsPaid, totalPaid,
+   *   collateralType (uint8), collateralReference (string),
+   *   status (uint8), createdAt, fundedAt
+   */
+  _normalizeLoan(raw) {
+    const fmt6 = (bn) => ethers.utils.formatUnits(bn, 6);
+    const num   = (bn) => (bn && bn.toNumber) ? bn.toNumber() : Number(bn);
+
+    const statusNum = num(raw.status);
+    const colType   = num(raw.collateralType);
+
+    // Parse collateralReference (JSON blob) — graceful fallback
+    let colData = {};
+    try { colData = JSON.parse(raw.collateralReference); } catch {}
+
+    // Build synthetic installments array from paid-count
+    const totalInst = num(raw.totalInstallments);
+    const paidCount = num(raw.installmentsPaid);
+    const instAmt   = fmt6(raw.installmentAmount);
+
+    const installments = Array.from({ length: totalInst }, (_, i) => ({
+      index:       i,
+      number:      i + 1,
+      amount:      instAmt,
+      status:      i < paidCount ? 'Paid'    : 'Pending',
+      statusLabel: i < paidCount ? 'Paid'    : 'Pending',
+      dueDate:     0,
+      paidDate:    i < paidCount ? num(raw.fundedAt) : 0
+    }));
+
+    const statusLabels = { 0: 'Requested', 1: 'Approved', 2: 'Active', 3: 'Repaid', 4: 'Defaulted' };
+
+    return {
+      // IDs & addresses
+      id:               num(raw.id).toString(),
+      borrower:         raw.borrower,
+      lender:           raw.lender,
+
+      // Financial (formatted)
+      principalAmount:      fmt6(raw.principal),
+      interestRateMonthly:  num(raw.interestRate),   // integer % (1-5)
+      installmentAmount:    instAmt,
+      totalRepayable:       fmt6(raw.totalRepayment),
+      totalPaid:            fmt6(raw.totalPaid),
+
+      // Installment tracking
+      totalInstallments: totalInst,
+      paidInstallments:  paidCount,
+      installments,
+
+      // Timestamps
+      createdAt: num(raw.createdAt),
+      fundedAt:  num(raw.fundedAt),
+
+      // Status
+      status:      statusNum,
+      statusLabel: statusLabels[statusNum] || 'Unknown',
+
+      // Collateral
+      collateral: {
+        colType,
+        colTypeLabel:      colType === 0 ? 'RWA' : 'CRYPTO',
+        reference:         raw.collateralReference,
+        // RWA fields
+        assetType:         colData.type          || '',
+        description:       colData.description   || '',
+        estimatedValueUSD: colData.valueUSD       || '0',
+        jurisdiction:      colData.jurisdiction   || '',
+        documentHash:      colData.docHash        || '',
+        documentURI:       colData.docURI         || '',
+        // Crypto fields
+        cryptoToken:       colData.token          || '',
+        cryptoAmount:      colData.amount         || '0',
+        collateralRatio:   colData.ratioBps != null
+                           ? Math.floor(colData.ratioBps / 100) : 120
+      },
+
+      // Borrower info (packed in collateralReference JSON)
+      borrowerInfo: {
+        fullName:         colData.borrower?.name       || '',
+        email:            colData.borrower?.email      || '',
+        country:          colData.borrower?.country    || '',
+        city:             colData.borrower?.city       || '',
+        employmentStatus: colData.borrower?.employment || ''
+      }
+    };
   }
 
-  async getAllOffers() {
-    await this._initMarketplace();
-    if (!this.marketplaceContract) return [];
+  /**
+   * Get all loans for a user (borrower OR lender — contract indexes both).
+   */
+  async getUserLoans(address) {
+    if (!this.contract) return [];
     try {
-      const ids = await this.marketplaceContract.getAllOfferIds();
-      const offers = await Promise.all(ids.map(id => this.getOffer(id.toString())));
-      return offers.filter(Boolean);
+      const ids   = await this.contract.getUserLoans(address || this.address);
+      if (!ids || ids.length === 0) return [];
+      const loans = await Promise.all(ids.map(id => this.getLoanFull(id.toString())));
+      return loans.filter(Boolean);
+    } catch (e) {
+      console.warn('getUserLoans error:', e.message);
+      return [];
+    }
+  }
+
+  // Aliases for backward-compat with app.js
+  async getBorrowerLoans(address) { return this.getUserLoans(address); }
+  async getLenderLoans(address)   { return this.getUserLoans(address); }
+
+  async getRemainingAmount(loanId) {
+    if (!this.contract) return { remaining: '0', installmentsLeft: 0 };
+    try {
+      const [remaining, left] = await this.contract.getRemainingAmount(loanId);
+      return {
+        remaining:        ethers.utils.formatUnits(remaining, 6),
+        installmentsLeft: left.toNumber()
+      };
+    } catch { return { remaining: '0', installmentsLeft: 0 }; }
+  }
+
+  async getTotalLoans() {
+    if (!this.contract) return 0;
+    try {
+      const n = await this.contract.getTotalLoans();
+      return n.toNumber();
+    } catch { return 0; }
+  }
+
+  /**
+   * Get all loans ever created (fetches IDs 1..loanCount).
+   * Use `limit` to avoid loading too many at once.
+   */
+  async getAllLoans(limit = 50) {
+    if (!this.contract) return [];
+    try {
+      const total = await this.getTotalLoans();
+      const count = Math.min(total, limit);
+      if (count === 0) return [];
+      const ids   = Array.from({ length: count }, (_, i) => i + 1);
+      const loans = await Promise.all(ids.map(id => this.getLoanFull(id)));
+      return loans.filter(Boolean);
     } catch { return []; }
   }
 
-  async getActiveOffers() {
-    await this._initMarketplace();
-    if (!this.marketplaceContract) return [];
-    try {
-      const ids = await this.marketplaceContract.getActiveOfferIds();
-      const offers = await Promise.all(ids.map(id => this.getOffer(id.toString())));
-      return offers.filter(Boolean);
-    } catch { return []; }
+  /**
+   * Returns the next pending installment for a loan (for chatbot / payment center).
+   */
+  async getNextPendingInstallment(loanId) {
+    const loan = await this.getLoanFull(loanId);
+    if (!loan) return null;
+    const next = loan.installments.find(i => i.status === 'Pending');
+    if (!next) return null;
+    return {
+      index:  next.index,
+      number: next.number,
+      amount: next.amount,
+      dueDate: 0,
+      status: 'Pending'
+    };
   }
 
-  async getLenderOffers(address) {
-    await this._initMarketplace();
-    if (!this.marketplaceContract) return [];
-    try {
-      const ids = await this.marketplaceContract.getLenderOfferIds(address || this.address);
-      const offers = await Promise.all(ids.map(id => this.getOffer(id.toString())));
-      return offers.filter(Boolean);
-    } catch { return []; }
+  // ─────────────────────────────────────────────────────────────────────
+  //  IPFS / File Hashing  (Pinata integration)
+  // ─────────────────────────────────────────────────────────────────────
+
+  async hashFile(file) {
+    const buffer     = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray  = Array.from(new Uint8Array(hashBuffer));
+    return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  async getOfferROI(offerId) {
-    await this._initMarketplace();
-    if (!this.marketplaceContract) return 0;
+  async uploadToIPFS(file) {
+    const formData = new FormData();
+    formData.append('file', file);
     try {
-      const roi = await this.marketplaceContract.getEstimatedROI(offerId);
-      return (roi.toNumber() / 100).toFixed(2); // percent
-    } catch { return '0.00'; }
+      const resp = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+        method: 'POST',
+        headers: {
+          'pinata_api_key':        window.PINATA_API_KEY    || '',
+          'pinata_secret_api_key': window.PINATA_SECRET_KEY || ''
+        },
+        body: formData
+      });
+      if (!resp.ok) throw new Error(`Pinata error: ${resp.status}`);
+      const data = await resp.json();
+      return {
+        hash: '0x' + data.IpfsHash,
+        uri:  `ipfs://${data.IpfsHash}`,
+        url:  `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`
+      };
+    } catch {
+      // Fallback: hash the file locally (no IPFS upload)
+      const hash = await this.hashFile(file);
+      return { hash, uri: `file://${file.name}`, url: null, localOnly: true };
+    }
   }
 
-  async checkLoanCompatibility(offerId, loanAmount, collateralType, collateralRatioBps) {
-    await this._initMarketplace();
-    if (!this.marketplaceContract) return { ok: false, reason: 'Contract not configured' };
+  // ─────────────────────────────────────────────────────────────────────
+  //  Private helpers
+  // ─────────────────────────────────────────────────────────────────────
+
+  /**
+   * Parse a loanId from a transaction receipt event.
+   * ethers v5: receipt.events array with named .event and .args.
+   */
+  _parseLoanId(receipt, eventName) {
     try {
-      const amtBN  = ethers.utils.parseUnits(loanAmount.toString(), 6);
-      const [ok, reason] = await this.marketplaceContract.isLoanCompatible(
-        offerId, amtBN, parseInt(collateralType), parseInt(collateralRatioBps)
-      );
-      return { ok, reason };
-    } catch (e) { return { ok: false, reason: e.message }; }
+      const ev = receipt.events?.find(e => e.event === eventName);
+      return ev?.args?.loanId?.toString() || 'unknown';
+    } catch {
+      return 'unknown';
+    }
   }
+
+  // ─────────────────────────────────────────────────────────────────────
+  //  Marketplace stubs (off-chain / API-based — no on-chain contract)
+  // ─────────────────────────────────────────────────────────────────────
+  //  The marketplace operates via the Hono backend API.
+  //  These stubs maintain backward-compat with app.js calls.
+
+  async createOffer(p)        { throw new Error('Marketplace uses API. See the Lend page.'); }
+  async updateOffer(id, p)    { throw new Error('Use the Lend page to manage offers.'); }
+  async pauseOffer(id)        { throw new Error('Use the Lend page to pause offers.'); }
+  async resumeOffer(id)       { throw new Error('Use the Lend page to resume offers.'); }
+  async addLiquidity(id, amt) { throw new Error('Use the Lend page to add liquidity.'); }
+  async withdrawLiquidity(id, amt) { throw new Error('Use the Lend page to withdraw.'); }
+  async closeOffer(id)        { throw new Error('Use the Lend page to close offers.'); }
+  async getAllOffers()        { return []; }
+  async getActiveOffers()     { return []; }
+  async getLenderOffers(a)    { return []; }
+  async getOffer(id)          { return null; }
 }
 
-// Singleton
+// ─── Singleton — globally available as window.web3 ──────────────────────────
 window.web3 = new Web3Manager();
