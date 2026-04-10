@@ -9,9 +9,6 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-// ── Platform fee (display-only — not enforced on-chain) ────────────────────
-const PLATFORM_FEE_PCT = 0.02; // 2% flat fee on principal
-
 // ── Module state ──────────────────────────────────────────────────────────────
 const MP = {
   allLoans:      [],   // raw normalised loans from chain
