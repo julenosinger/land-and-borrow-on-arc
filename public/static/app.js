@@ -1254,27 +1254,25 @@ async function payFullLoan() {
     }
 
     showToast(`Loan #${loanId} fully repaid! 🎉`, 'success');
-    if (lastTx) showReceiptModal({ loanId, amount: remaining, txHash: lastTx.txHash, type: 'Full Loan Repayment' });
 
-    // ── Generate PDF receipt for full repayment (background) ──────────────────
+    // ── Generate PDF receipt for full repayment ────────────────────────────────
     if (window.RCPT) {
       try {
         // Delay to let chain state propagate
         await new Promise(r => setTimeout(r, 2500));
         const loanFull = await window.web3.getLoanFull(loanId);
         const repayTx = lastTx?.txHash || '';
-        const receiptId = await window.RCPT.generate(
+        await window.RCPT.generate(
           loanFull,
           'LOAN_REPAID',
           { repay: repayTx },
           { wallet: window.web3?.address }
         );
-        showToast(`📄 Repayment receipt ready — Loan #${loanId}`, 'info', 5000);
-        // Show View Receipt button in a follow-up toast-style banner
-        _showReceiptBanner(loanId, receiptId, 'LOAN_REPAID');
       } catch (rErr) {
         console.warn('[DaatFI Receipt] Receipt generation error:', rErr);
       }
+    } else if (lastTx) {
+      showReceiptModal({ loanId, amount: remaining, txHash: lastTx.txHash, type: 'Full Loan Repayment' });
     }
 
     loadLoanInstallments(loanId);

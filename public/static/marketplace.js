@@ -595,30 +595,30 @@ async function mpExecuteFund(loanId, interestRate, principalAmount) {
     // ── Success ───────────────────────────────────────────────────────────────
     showToast(`🎉 Loan #${loanId} funded! USDC sent to borrower.`, 'success', 8000);
 
-    // ── Generate PDF receipt (background, non-blocking) ───────────────────────
+    // Show success modal immediately
+    _mpShowFundSuccessModal(loanId, interestRate, principalAmount, null);
+
+    // ── Generate PDF receipt (auto-opens after generation) ────────────────────
     if (window.RCPT) {
       try {
-        // Small delay to let the chain state propagate before reading the loan
+        // Delay to let chain state propagate before reading the loan
         await new Promise(r => setTimeout(r, 2500));
-        const loanFull = await window.web3.getLoanFull(loanId);
+        const loanFull   = await window.web3.getLoanFull(loanId);
         const fundTxHash = fundResult?.receipt?.transactionHash || fundResult?.tx?.hash || '';
-        // Use current wallet as lender if the chain hasn't updated lender field yet
-        const lenderWallet = window.web3?.address || '';
-        const receiptId = await window.RCPT.generate(
+        // Use current wallet as lender fallback if chain hasn't updated yet
+        const lenderWallet = (loanFull?.lender && loanFull.lender !== '0x0000000000000000000000000000000000000000')
+          ? loanFull.lender
+          : (window.web3?.address || '');
+        if (loanFull && lenderWallet) loanFull.lender = lenderWallet;
+        await window.RCPT.generate(
           loanFull,
           'LOAN_FUNDED',
           { fund: fundTxHash },
           { wallet: lenderWallet }
         );
-        showToast(`📄 Receipt ready — Loan #${loanId}`, 'info', 4000);
-        // Update the success modal to include View Receipt button
-        _mpShowFundSuccessModal(loanId, interestRate, principalAmount, receiptId);
       } catch (rErr) {
         console.warn('[DaatFI Receipt] Receipt generation error:', rErr);
-        _mpShowFundSuccessModal(loanId, interestRate, principalAmount, null);
       }
-    } else {
-      _mpShowFundSuccessModal(loanId, interestRate, principalAmount, null);
     }
 
     // Invalidate cache and refresh

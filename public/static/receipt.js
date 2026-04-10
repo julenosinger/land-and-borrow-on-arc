@@ -397,7 +397,7 @@
 
   // ── Main generate function ────────────────────────────────────────────────────
   /**
-   * Generate and store a receipt PDF.
+   * Generate, store and automatically open a receipt PDF.
    *
    * @param {object} loanData   - normalized loan object from _normalizeLoan()
    * @param {string} type       - 'LOAN_FUNDED' | 'LOAN_REPAID'
@@ -456,6 +456,17 @@
     };
 
     _storeReceipt(receipt);
+
+    // ── Auto-open PDF immediately after generation ────────────────────────────
+    // Load jsPDF and open the receipt modal without waiting for user to click
+    _loadjsPDF(function () {
+      try {
+        const doc = _buildPDF(receipt);
+        _openPDFModal(doc, receiptId, receipt.loanId, receipt.type);
+      } catch (pdfErr) {
+        console.error('[DaatFI Receipt] Auto-open PDF error:', pdfErr);
+      }
+    });
 
     // Persist to backend (non-blocking, best-effort)
     try {
