@@ -428,16 +428,63 @@
   function _showViewer(loanId, col) {
     _injectCSS();
 
-    const docUrl  = _resolveUrl(col.documentURI || col.docURI || '');
-    const type    = _fileType(docUrl);
-    const hash    = col.documentHash || col.docHash || '';
-    const hasDoc  = !!docUrl;
+    const rawURI   = col.documentURI || col.docURI || '';
+    const isFileURI = rawURI.startsWith('file://');
+    const docUrl   = _resolveUrl(rawURI);
+    const type     = _fileType(docUrl);
+    const hash     = col.documentHash || col.docHash || '';
+    const hasDoc   = !!docUrl;
 
     const filename = `DaatFI-Loan${loanId}-CollateralDoc`;
 
     const overlay = document.createElement('div');
     overlay.className = 'dv-overlay';
     overlay.style.zIndex = Z_VIEWER;
+
+    // Determine preview area content
+    let previewContent;
+    if (hasDoc) {
+      previewContent = _buildPreview(docUrl, type);
+    } else if (isFileURI) {
+      // Document was uploaded locally (no Pinata) — hash stored on-chain, file not accessible
+      const origName = rawURI.replace('file://', '');
+      previewContent = `
+        <div class="dv-empty">
+          <div class="dv-empty-icon">📋</div>
+          <div class="dv-empty-text" style="max-width:480px; margin:0 auto;">
+            <strong style="color:var(--text-primary,#f1f5f9); display:block; margin-bottom:10px; font-size:15px;">
+              Document stored locally — not available online
+            </strong>
+            The borrower uploaded this document from their device.<br>
+            The file was <strong>not</strong> uploaded to IPFS at submission time.<br><br>
+            <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:10px; padding:14px 16px; margin-top:12px; text-align:left;">
+              <div style="font-size:11px; color:var(--text-muted,#64748b); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Original filename</div>
+              <div style="font-family:monospace; font-size:13px; color:var(--amber,#f59e0b); word-break:break-all;">${_esc(origName)}</div>
+              ${hash ? `
+              <div style="font-size:11px; color:var(--text-muted,#64748b); margin-top:10px; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">SHA-256 on-chain hash</div>
+              <div style="font-family:monospace; font-size:11px; color:var(--text-secondary,#94a3b8); word-break:break-all;">${hash}</div>` : ''}
+            </div>
+            <div style="margin-top:14px; font-size:12px; color:var(--text-muted,#64748b);">
+              <i class="fa-solid fa-circle-info" style="color:var(--cyan,#06b6d4); margin-right:4px;"></i>
+              Request the borrower to re-submit the loan with IPFS enabled (Pinata configured),
+              or ask them to share the document via a secure channel for physical verification.
+            </div>
+          </div>
+        </div>`;
+    } else {
+      previewContent = `
+        <div class="dv-empty">
+          <div class="dv-empty-icon">📂</div>
+          <div class="dv-empty-text">
+            No collateral document was submitted with this loan request.<br>
+            ${hash
+              ? `<span style="font-size:11px;color:var(--text-muted);">
+                  SHA-256 on-chain hash: <span style="font-family:monospace; word-break:break-all;">${hash}</span>
+                </span>`
+              : 'No document hash or file was attached.'}
+          </div>
+        </div>`;
+    }
 
     overlay.innerHTML = `
       <div class="dv-viewer" role="dialog" aria-modal="true"
@@ -455,6 +502,8 @@
             <div class="dv-viewer-subtitle">
               Collateral: ${col.colTypeLabel || 'RWA'}
               ${col.assetType ? ' · ' + _esc(col.assetType) : ''}
+              ${isFileURI && !hasDoc ? ' · ⚠ Local file only' : ''}
+              ${hasDoc ? ' · ✓ IPFS verified' : ''}
             </div>
           </div>
           <button class="dv-viewer-close" id="dv-close" aria-label="Close documents viewer">
@@ -474,7 +523,13 @@
           </span>
           ${hash ? `<span class="dv-tool-badge" style="background:rgba(139,92,246,0.08);border-color:rgba(139,92,246,0.25);color:var(--purple,#8b5cf6);">
             <i class="fa-solid fa-fingerprint"></i>
-            SHA-256: ${hash.slice(0,12)}…${hash.slice(-6)}
+            SHA-256: ${hash.slice(0,14)}…
+          </span>` : ''}
+          ${isFileURI && !hasDoc ? `<span class="dv-tool-badge" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);color:var(--amber,#f59e0b);">
+            <i class="fa-solid fa-triangle-exclamation"></i> No IPFS Link
+          </span>` : ''}
+          ${hasDoc ? `<span class="dv-tool-badge" style="background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.25);color:var(--green,#10b981);">
+            <i class="fa-solid fa-cloud"></i> IPFS
           </span>` : ''}
           <span class="dv-tool-sep"></span>
           ${hasDoc ? `
@@ -482,7 +537,7 @@
               title="Open in new tab (no auto-download)">
               <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in New Tab
             </button>
-            <a class="dv-tool-btn dv-tool-btn-secondary" id="dv-btn-download"
+            <a class="dv-tool-btn dv-tool-btn-primary" id="dv-btn-download"
               href="${docUrl}" download="${filename}"
               title="Download document">
               <i class="fa-solid fa-download"></i> Download
@@ -492,20 +547,7 @@
 
         <!-- Preview area -->
         <div class="dv-preview-area" id="dv-preview-area">
-          ${hasDoc
-            ? _buildPreview(docUrl, type)
-            : `<div class="dv-empty">
-                <div class="dv-empty-icon">📂</div>
-                <div class="dv-empty-text">
-                  No IPFS document available for this loan.<br>
-                  ${hash
-                    ? `<span style="font-size:11px;color:var(--text-muted);">
-                        The document hash <span style="font-family:monospace;">${hash.slice(0,20)}…</span>
-                        is recorded on-chain for verification.
-                      </span>`
-                    : 'No collateral document was submitted with this loan request.'}
-                </div>
-              </div>`}
+          ${previewContent}
         </div>
 
         <!-- Consent footer badge -->

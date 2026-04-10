@@ -2307,12 +2307,13 @@ html.light .bw-coverage-card  { background: #f1f5f9; }
 .mp-card-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 14px 18px;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
   background: var(--bg-surface);
 }
 .mp-fund-btn {
-  flex: 1;
+  /* no flex:1 — use btn-sm size set in JS */
 }
 
 /* ── Loading spinner inside grid ── */

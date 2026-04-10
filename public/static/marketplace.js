@@ -434,8 +434,8 @@ function _mpBuildCard(loan) {
           <i class="fa-solid fa-eye"></i> Details
         </button>
         ${!isBorrower && loan.collateral && loan.collateral.colTypeLabel === 'RWA'
-          ? `<button class="btn btn-secondary btn-sm" onclick="(function(id){var cached=window.MP&&window.MP.allLoans?window.MP.allLoans.find(function(x){return String(x.id)===String(id);}):null;if(cached&&cached.collateral&&window.DOCS){window.DOCS.open(id,cached.collateral);}else{mpViewLoanDetail(id);}})(${loan.id})" title="View borrower proof documents">
-               <i class="fa-solid fa-folder-open"></i> Documents
+          ? `<button class="btn btn-secondary btn-sm" onclick="(function(id){var cached=window.MP&&window.MP.allLoans?window.MP.allLoans.find(function(x){return String(x.id)===String(id);}):null;var col=cached&&cached.collateral?cached.collateral:null;if(window.DOCS){window.DOCS.open(id,col);}else{mpViewLoanDetail(id);}})(${loan.id})" title="View borrower proof documents" style="color:var(--cyan);">
+               <i class="fa-solid fa-folder-open"></i>
              </button>`
           : ''}
         ${isBorrower
@@ -443,10 +443,10 @@ function _mpBuildCard(loan) {
                <i class="fa-solid fa-lock"></i> Own Request
              </button>`
           : !isConnected
-          ? `<button class="btn btn-primary" onclick="connectWalletAndFund(${loan.id})" style="flex:1;">
+          ? `<button class="btn btn-primary btn-sm" onclick="connectWalletAndFund(${loan.id})">
                <i class="fa-solid fa-wallet"></i> Connect & Fund
              </button>`
-          : `<button class="btn btn-primary mp-fund-btn" onclick="mpOpenFundModal(${loan.id})" style="flex:1;">
+          : `<button class="btn btn-primary btn-sm mp-fund-btn" onclick="mpOpenFundModal(${loan.id})">
                <i class="fa-solid fa-bolt"></i> Fund This Loan
              </button>`
         }
