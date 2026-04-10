@@ -236,11 +236,14 @@
     y += 6;
 
     const loan = receipt.loan;
+    const platformFeePct = 0.02;
+    const platformFeeAmt = (parseFloat(loan.principalAmount || 0) * platformFeePct).toFixed(2);
     const loanRows = [
       ['Loan ID',              `#${loan.id}`],
       ['Principal Amount',     `$${parseFloat(loan.principalAmount || 0).toFixed(2)} USDC`],
       ['Interest Rate',        `${loan.interestRateMonthly || '—'}% / month`],
-      ['Total Repayable',      `$${parseFloat(loan.totalRepayable || 0).toFixed(2)} USDC`],
+      ['Platform Fee (2%)',    `$${platformFeeAmt} USDC`],
+      ['Total Repayable',      `$${(parseFloat(loan.totalRepayable || 0) + parseFloat(loan.principalAmount || 0) * platformFeePct).toFixed(2)} USDC`],
       ['Installments',         `${loan.paidInstallments || 0} / ${loan.totalInstallments || '—'} paid`],
       ['Installment Amount',   `$${parseFloat(loan.installmentAmount || 0).toFixed(2)} USDC`],
       ['Loan Status',          loan.statusLabel || '—'],
@@ -253,8 +256,10 @@
     for (let i = 0; i < half; i++) {
       const left  = loanRows[i];
       const right = loanRows[i + half];
-      label(left[0]+':', left[1], col1, colV1, y);
-      if (right) label(right[0]+':', right[1], col2, colV2, y);
+      const leftColor  = left[0].startsWith('Platform Fee')  ? C.amber : undefined;
+      const rightColor = right && right[0].startsWith('Platform Fee') ? C.amber : undefined;
+      label(left[0]+':', left[1], col1, colV1, y, leftColor);
+      if (right) label(right[0]+':', right[1], col2, colV2, y, rightColor);
       y += 6;
     }
     y += 4;

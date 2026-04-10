@@ -565,11 +565,13 @@ function mpUpdateFundPreview(loanId) {
 
   const rows = document.getElementById('mp-fund-preview-rows');
   if (!rows) return;
+  const netReturn = (parseFloat(interest) - parseFloat(fee)).toFixed(2);
   rows.innerHTML = `
     <div class="detail-row"><span class="detail-label">You send now</span><span class="detail-value mono text-amber">$${mpFmt(principal)} USDC</span></div>
-    <div class="detail-row"><span class="detail-label">Interest earned</span><span class="detail-value mono text-green">+$${interest} USDC</span></div>
-    <div class="detail-row"><span class="detail-label">Platform fee (2%)</span><span class="detail-value mono" style="color:var(--amber);">$${fee} USDC</span></div>
-    <div class="detail-row"><span class="detail-label">Borrower repays total</span><span class="detail-value mono font-bold">$${total} USDC</span></div>
+    <div class="detail-row"><span class="detail-label">Gross interest earned</span><span class="detail-value mono text-green">+$${interest} USDC</span></div>
+    <div class="detail-row"><span class="detail-label">Platform fee (2% of principal)</span><span class="detail-value mono" style="color:var(--amber);">-$${fee} USDC</span></div>
+    <div class="detail-row"><span class="detail-label">Net return to you</span><span class="detail-value mono font-bold" style="color:var(--green);">+$${netReturn} USDC</span></div>
+    <div class="detail-row"><span class="detail-label">Borrower repays total</span><span class="detail-value mono">$${total} USDC</span></div>
     <div class="detail-row" style="border:none;"><span class="detail-label">Per installment</span><span class="detail-value mono text-cyan">$${instAmt} USDC</span></div>`;
 }
 
@@ -596,13 +598,17 @@ async function mpExecuteFund(loanId, interestRate, principalAmount) {
     // ── Generate PDF receipt (background, non-blocking) ───────────────────────
     if (window.RCPT) {
       try {
+        // Small delay to let the chain state propagate before reading the loan
+        await new Promise(r => setTimeout(r, 2500));
         const loanFull = await window.web3.getLoanFull(loanId);
         const fundTxHash = fundResult?.receipt?.transactionHash || fundResult?.tx?.hash || '';
+        // Use current wallet as lender if the chain hasn't updated lender field yet
+        const lenderWallet = window.web3?.address || '';
         const receiptId = await window.RCPT.generate(
           loanFull,
           'LOAN_FUNDED',
           { fund: fundTxHash },
-          { wallet: window.web3?.address }
+          { wallet: lenderWallet }
         );
         showToast(`📄 Receipt ready — Loan #${loanId}`, 'info', 4000);
         // Update the success modal to include View Receipt button
@@ -645,7 +651,8 @@ function _mpShowFundSuccessModal(loanId, rate, amount, receiptId) {
         <div class="card card-sm" style="background:var(--bg-input); text-align:left; margin-bottom:16px;">
           <div class="detail-row"><span class="detail-label">Loan</span><span class="detail-value mono" style="color:var(--cyan);">#${loanId}</span></div>
           <div class="detail-row"><span class="detail-label">Amount Sent</span><span class="detail-value mono">$${mpFmt(amount)} USDC</span></div>
-          <div class="detail-row" style="border:none;"><span class="detail-label">Your Rate</span><span class="detail-value text-green font-bold">${rate}%/month</span></div>
+          <div class="detail-row"><span class="detail-label">Your Rate</span><span class="detail-value text-green font-bold">${rate}%/month</span></div>
+          <div class="detail-row" style="border:none;"><span class="detail-label">Platform Fee (2%)</span><span class="detail-value mono" style="color:var(--amber);">-$${(parseFloat(amount)*PLATFORM_FEE_PCT).toFixed(2)} USDC</span></div>
         </div>
         ${rcptBtn}
         <div style="font-size:12px; color:var(--text-muted); margin-top:12px;">

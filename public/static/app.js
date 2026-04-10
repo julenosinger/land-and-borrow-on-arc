@@ -1152,6 +1152,8 @@ async function payFullLoan() {
     // ── Generate PDF receipt for full repayment (background) ──────────────────
     if (window.RCPT) {
       try {
+        // Delay to let chain state propagate
+        await new Promise(r => setTimeout(r, 2500));
         const loanFull = await window.web3.getLoanFull(loanId);
         const repayTx = lastTx?.txHash || '';
         const receiptId = await window.RCPT.generate(
