@@ -1296,6 +1296,79 @@ app.get('/', (c) => {
 
 </main>
 
+<!-- ════ FOOTER ════ -->
+<footer class="site-footer">
+  <div class="footer-divider"></div>
+  <div class="footer-inner">
+
+    <!-- Col 1: Arc Network -->
+    <div class="footer-col">
+      <div class="footer-logo">
+        <span class="footer-logo-icon">⚡</span>
+        <span class="footer-logo-text">Arc<span class="footer-logo-fi">Fi</span></span>
+      </div>
+      <p class="footer-tagline">Global decentralized lending on Arc Testnet. Hybrid RWA + crypto collateral.</p>
+      <div class="footer-network-badge">
+        <span class="footer-net-dot" id="footer-net-dot"></span>
+        <span class="footer-net-label">Arc Testnet &nbsp;·&nbsp; Chain ID: 5042002</span>
+      </div>
+      <div class="footer-wallet-row" id="footer-wallet-row" style="display:none;">
+        <i class="fa-solid fa-wallet" style="font-size:11px;color:var(--text-muted);"></i>
+        <span class="footer-wallet-addr" id="footer-wallet-addr"></span>
+      </div>
+    </div>
+
+    <!-- Col 2: Resources -->
+    <div class="footer-col">
+      <div class="footer-col-title">Resources</div>
+      <ul class="footer-links">
+        <li><a href="https://docs.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
+          <i class="fa-solid fa-book"></i> Documentation
+        </a></li>
+        <li><a href="https://explorer.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
+          <i class="fa-solid fa-magnifying-glass"></i> Smart Contracts
+        </a></li>
+        <li><a href="https://github.com/julenosinger/land-and-borrow-on-arc" target="_blank" rel="noopener noreferrer" class="footer-link">
+          <i class="fa-brands fa-github"></i> GitHub Repository
+        </a></li>
+        <li><a href="https://explorer.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
+          <i class="fa-solid fa-circle-question"></i> Support / Help Center
+        </a></li>
+      </ul>
+    </div>
+
+    <!-- Col 3: Legal -->
+    <div class="footer-col">
+      <div class="footer-col-title">Legal</div>
+      <ul class="footer-links">
+        <li><a href="#" onclick="return false;" class="footer-link">
+          <i class="fa-solid fa-file-lines"></i> Terms of Service
+        </a></li>
+        <li><a href="#" onclick="return false;" class="footer-link">
+          <i class="fa-solid fa-shield-halved"></i> Privacy Policy
+        </a></li>
+        <li><a href="#" onclick="return false;" class="footer-link">
+          <i class="fa-solid fa-triangle-exclamation"></i> Disclaimer
+        </a></li>
+      </ul>
+      <div class="footer-disclaimer">
+        This platform operates on a testnet environment. All transactions are for testing purposes only.
+        No real‑world financial guarantees are provided. Users are fully responsible for their actions.
+        Non‑custodial: lenders assume full risk. RWA enforcement is off‑chain; crypto collateral is enforced on‑chain.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-bottom">
+    <span>© 2025 ArcFi — Decentralized Lending Protocol on Arc Testnet</span>
+    <span class="footer-bottom-sep">·</span>
+    <span>Built with Hono + Cloudflare Pages</span>
+    <span class="footer-bottom-sep">·</span>
+    <a href="https://arc.fun" target="_blank" rel="noopener noreferrer" class="footer-bottom-link">arc.fun ↗</a>
+  </div>
+</footer>
+
 <!-- ════ TOAST CONTAINER ════ -->
 <div id="toast-container"></div>
 
@@ -1303,7 +1376,7 @@ app.get('/', (c) => {
 <div id="modal-container"></div>
 
 <!-- ════ CHATBOT TOGGLE ════ -->
-<button id="chatbot-toggle" title="ArcFi AI Agent" onclick="window.chatbot && window.chatbot.toggle()">
+<button id="chatbot-toggle" title="ArcFi AI Agent">
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
       d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z"/>
@@ -1322,7 +1395,10 @@ app.get('/', (c) => {
         Online · Arc Testnet
       </div>
     </div>
-    <button onclick="window.chatbot && window.chatbot.toggle()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;">&times;</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button id="chatbot-clear" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:11px;padding:4px 8px;border-radius:6px;transition:color 0.2s;" onmouseover="this.style.color='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)'">Clear</button>
+      <button onclick="window.chatbot && window.chatbot.toggle()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:4px;">&times;</button>
+    </div>
   </div>
   <div class="chat-messages" id="chat-messages"></div>
   <div id="chat-typing" style="padding:8px 16px; display:none;">
@@ -1331,14 +1407,14 @@ app.get('/', (c) => {
     </div>
   </div>
   <div class="chat-quick-btns">
-    <button class="chat-quick-btn" onclick="chatQuick('Pay next installment')">💸 Pay next</button>
-    <button class="chat-quick-btn" onclick="chatQuick('Show my offers')">📊 My offers</button>
-    <button class="chat-quick-btn" onclick="chatQuick('How much do I owe?')">💰 Balance</button>
-    <button class="chat-quick-btn" onclick="chatQuick('help')">❓ Help</button>
+    <button class="chat-quick-btn" data-msg="Pay next installment">💸 Pay next</button>
+    <button class="chat-quick-btn" data-msg="Show my offers">📊 My offers</button>
+    <button class="chat-quick-btn" data-msg="How much do I owe?">💰 Balance</button>
+    <button class="chat-quick-btn" data-msg="help">❓ Help</button>
   </div>
   <div class="chat-input-row">
-    <input class="chat-input" id="chat-input" type="text" placeholder="Ask me about your loans..." onkeypress="if(event.key==='Enter')sendChatMessage()" />
-    <button class="chat-send-btn" onclick="sendChatMessage()">
+    <input class="chat-input" id="chat-input" type="text" placeholder="Ask me about your loans..." />
+    <button class="chat-send-btn" id="chat-send">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
     </button>
   </div>

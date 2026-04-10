@@ -180,6 +180,22 @@ function updateWalletUI(address) {
     label.innerHTML = 'Connect Wallet';
     btn.onclick = connectWallet;
   }
+
+  // Update footer wallet display
+  updateFooterWallet(address);
+}
+
+function updateFooterWallet(address) {
+  const row  = document.getElementById('footer-wallet-row');
+  const addr = document.getElementById('footer-wallet-addr');
+  if (!row || !addr) return;
+  if (address) {
+    const short = address.slice(0,6) + '…' + address.slice(-4);
+    addr.textContent = short;
+    row.style.display = 'flex';
+  } else {
+    row.style.display = 'none';
+  }
 }
 
 function showWalletInfo() {

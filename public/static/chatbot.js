@@ -554,115 +554,32 @@ class ChatbotUI {
   init() {
     if (this.initialized) return;
     this.initialized = true;
-    this._createUI();
     this._bindEvents();
     this._addMessage('bot', "👋 Hi! I'm **ArcFi AI**. I can help you manage loans and payments on Arc Testnet.\n\nType **help** to see what I can do!");
   }
 
-  _createUI() {
-    const html = `
-      <!-- Chatbot Toggle Button -->
-      <button id="chatbot-toggle"
-        class="fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-600 
-          rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110
-          border-2 border-cyan-400/30">
-        <svg id="chat-open-icon" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z"/>
-        </svg>
-        <svg id="chat-close-icon" class="w-6 h-6 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-        <span id="chat-badge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs 
-          flex items-center justify-center font-bold hidden">!</span>
-      </button>
-
-      <!-- Chatbot Window -->
-      <div id="chatbot-window" 
-        class="fixed bottom-24 right-6 z-40 w-96 max-w-[calc(100vw-3rem)] bg-slate-900 border border-slate-700 
-          rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 
-          opacity-0 scale-95 pointer-events-none"
-        style="height: 560px;">
-        
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700 p-4 flex items-center gap-3">
-          <div class="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v4"/>
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-white font-bold text-sm">ArcFi AI Agent</h3>
-            <p class="text-emerald-400 text-xs flex items-center gap-1">
-              <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-              Online — Arc Testnet
-            </p>
-          </div>
-          <button id="chatbot-clear" class="ml-auto text-slate-500 hover:text-slate-300 text-xs transition-colors">
-            Clear
-          </button>
-        </div>
-
-        <!-- Messages -->
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth"></div>
-
-        <!-- Typing Indicator -->
-        <div id="chat-typing" class="px-4 pb-2 hidden">
-          <div class="flex items-center gap-2 text-slate-500">
-            <div class="flex gap-1">
-              <span class="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style="animation-delay:0ms"></span>
-              <span class="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style="animation-delay:150ms"></span>
-              <span class="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style="animation-delay:300ms"></span>
-            </div>
-            <span class="text-xs">ArcFi AI is thinking...</span>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div id="chat-quick-actions" class="px-4 pb-2 flex flex-wrap gap-2">
-          <button class="quick-action text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 transition-colors">Pay next</button>
-          <button class="quick-action text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 transition-colors">Check balance</button>
-          <button class="quick-action text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 transition-colors">Payment history</button>
-        </div>
-
-        <!-- Input -->
-        <div class="border-t border-slate-700 p-3 flex gap-2">
-          <input id="chat-input" type="text" placeholder="Ask me anything about your loans..."
-            class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm 
-              placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"/>
-          <button id="chat-send" 
-            class="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center
-              hover:from-cyan-400 hover:to-blue-500 transition-all active:scale-95">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', html);
-  }
-
   _bindEvents() {
-    const toggle = document.getElementById('chatbot-toggle');
-    const input = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('chat-send');
-    const clearBtn = document.getElementById('chatbot-clear');
+    // Use the existing HTML chatbot panel and toggle
+    const toggleBtn = document.getElementById('chatbot-toggle');
+    const sendBtn   = document.getElementById('chat-send');
+    const input     = document.getElementById('chat-input');
+    const clearBtn  = document.getElementById('chatbot-clear');
 
-    toggle?.addEventListener('click', () => this.toggle());
-    sendBtn?.addEventListener('click', () => this._sendMessage());
-    input?.addEventListener('keypress', (e) => { if (e.key === 'Enter') this._sendMessage(); });
-    clearBtn?.addEventListener('click', () => {
-      document.getElementById('chat-messages').innerHTML = '';
+    if (toggleBtn) toggleBtn.addEventListener('click', () => this.toggle());
+    if (sendBtn)   sendBtn.addEventListener('click', () => this._sendMessage());
+    if (input)     input.addEventListener('keypress', (e) => { if (e.key === 'Enter') this._sendMessage(); });
+    if (clearBtn)  clearBtn.addEventListener('click', () => {
+      const msgs = document.getElementById('chat-messages');
+      if (msgs) msgs.innerHTML = '';
       this._addMessage('bot', "Chat cleared. Type **help** to see what I can do!");
     });
 
-    document.querySelectorAll('.quick-action').forEach(btn => {
+    // Quick-action buttons in the HTML panel
+    document.querySelectorAll('.chat-quick-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const input = document.getElementById('chat-input');
-        if (input) {
-          input.value = btn.textContent.trim();
+        const inp = document.getElementById('chat-input');
+        if (inp) {
+          inp.value = btn.getAttribute('data-msg') || btn.textContent.trim();
           this._sendMessage();
         }
       });
@@ -671,25 +588,20 @@ class ChatbotUI {
 
   toggle() {
     this.isOpen = !this.isOpen;
-    const win = document.getElementById('chatbot-window');
-    const openIcon = document.getElementById('chat-open-icon');
-    const closeIcon = document.getElementById('chat-close-icon');
-    const badge = document.getElementById('chat-badge');
+    const panel  = document.getElementById('chatbot-panel');
+    const toggle = document.getElementById('chatbot-toggle');
+    const unread = document.getElementById('chat-unread');
+
+    if (!panel) return;
 
     if (this.isOpen) {
-      win.classList.replace('opacity-0', 'opacity-100');
-      win.classList.replace('scale-95', 'scale-100');
-      win.classList.remove('pointer-events-none');
-      openIcon.classList.add('hidden');
-      closeIcon.classList.remove('hidden');
-      badge.classList.add('hidden');
+      panel.classList.add('open');
+      if (toggle) toggle.classList.add('active');
+      if (unread) unread.style.display = 'none';
       document.getElementById('chat-input')?.focus();
     } else {
-      win.classList.replace('opacity-100', 'opacity-0');
-      win.classList.replace('scale-100', 'scale-95');
-      win.classList.add('pointer-events-none');
-      openIcon.classList.remove('hidden');
-      closeIcon.classList.add('hidden');
+      panel.classList.remove('open');
+      if (toggle) toggle.classList.remove('active');
     }
   }
 
@@ -729,7 +641,11 @@ class ChatbotUI {
 
   _showTyping(show) {
     const el = document.getElementById('chat-typing');
-    if (el) el.classList.toggle('hidden', !show);
+    if (!el) return;
+    el.style.display = show ? 'block' : 'none';
+    // Also handle class-based hiding for compatibility
+    if (show) el.classList.remove('hidden');
+    else el.classList.add('hidden');
   }
 
   _addMessage(role, text, meta = {}) {
@@ -738,31 +654,20 @@ class ChatbotUI {
 
     const isBot = role === 'bot';
     const formattedText = text
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br/>');
 
-    const typeColors = {
-      success: 'border-l-2 border-emerald-500 bg-emerald-500/5',
-      error: 'border-l-2 border-red-500 bg-red-500/5',
-      warning: 'border-l-2 border-amber-500 bg-amber-500/5',
-      confirm: 'border-l-2 border-yellow-500 bg-yellow-500/5',
-      help: 'border-l-2 border-blue-500 bg-blue-500/5',
-    };
-
-    const extraClass = isBot && meta.type ? typeColors[meta.type] || '' : '';
+    const typeClass = meta.type ? ` ${meta.type}` : '';
 
     const msg = document.createElement('div');
-    msg.className = `flex ${isBot ? 'justify-start' : 'justify-end'}`;
+    msg.className = `chat-msg ${isBot ? 'bot' : 'user'}${typeClass}`;
     msg.innerHTML = `
-      <div class="max-w-[85%] ${isBot
-        ? `bg-slate-800 text-slate-200 rounded-2xl rounded-tl-sm ${extraClass}`
-        : 'bg-gradient-to-br from-cyan-600 to-blue-700 text-white rounded-2xl rounded-tr-sm'
-      } px-4 py-3 text-sm leading-relaxed shadow-sm">
+      <div class="chat-bubble">
         ${formattedText}
         ${meta.txHash ? `
-          <div class="mt-2 pt-2 border-t border-slate-700">
-            <a href="${window.ARC_EXPLORER}/tx/${meta.txHash}" target="_blank" 
-              class="text-cyan-400 text-xs hover:underline">View tx →</a>
+          <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1)">
+            <a href="${window.ARC_EXPLORER || 'https://explorer.arc.fun'}/tx/${meta.txHash}" target="_blank"
+              style="color:var(--cyan);font-size:11px;">View transaction →</a>
           </div>
         ` : ''}
       </div>
@@ -770,9 +675,13 @@ class ChatbotUI {
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
 
-    // Show notification badge when closed
+    // Show unread badge when panel is closed
     if (isBot && !this.isOpen) {
-      document.getElementById('chat-badge')?.classList.remove('hidden');
+      const unread = document.getElementById('chat-unread');
+      if (unread) {
+        unread.style.display = 'flex';
+        unread.classList.add('show');
+      }
     }
   }
 }
