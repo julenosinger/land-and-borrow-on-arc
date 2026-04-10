@@ -5,7 +5,7 @@
 
 const ARC_CHAIN_ID  = 5042002;
 const ARC_RPC_URL   = "https://rpc.testnet.arc.network";
-const ARC_EXPLORER  = "https://explorer.arc.fun";
+const ARC_EXPLORER  = "https://testnet.arcscan.app";
 
 // ── Deployed Contract Addresses ──────────────────────────────────────────────
 // ArcFiLoanManager — deployed 2025

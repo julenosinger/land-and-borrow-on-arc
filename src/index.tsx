@@ -1491,7 +1491,7 @@ app.get('/', (c) => {
           <div class="detail-row"><span class="detail-label">Chain ID</span><span class="detail-value mono">5042002</span></div>
           <div class="detail-row"><span class="detail-label">RPC URL</span><span class="detail-value mono text-xs">https://rpc.testnet.arc.network</span></div>
           <div class="detail-row"><span class="detail-label">Explorer</span>
-            <a href="https://explorer.arc.fun" target="_blank" class="underline-link">explorer.arc.fun ↗</a>
+            <a href="https://testnet.arcscan.app" target="_blank" class="underline-link">testnet.arcscan.app ↗</a>
           </div>
           <div class="detail-row"><span class="detail-label">Currency</span><span class="detail-value">USDC (native gas token)</span></div>
           <button class="btn btn-secondary btn-full btn-sm" style="margin-top:14px;" onclick="addArcNetwork()">
@@ -1558,13 +1558,13 @@ app.get('/', (c) => {
         <li><a href="https://docs.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
           <i class="fa-solid fa-book"></i>Documentation
         </a></li>
-        <li><a href="https://explorer.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
+        <li><a href="https://testnet.arcscan.app" target="_blank" rel="noopener noreferrer" class="footer-link">
           <i class="fa-solid fa-cube"></i>Smart Contracts
         </a></li>
         <li><a href="https://github.com/julenosinger/land-and-borrow-on-arc" target="_blank" rel="noopener noreferrer" class="footer-link">
           <i class="fa-brands fa-github"></i>GitHub Repository
         </a></li>
-        <li><a href="https://explorer.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
+        <li><a href="https://testnet.arcscan.app" target="_blank" rel="noopener noreferrer" class="footer-link">
           <i class="fa-solid fa-headset"></i>Support / Help Center
         </a></li>
       </ul>

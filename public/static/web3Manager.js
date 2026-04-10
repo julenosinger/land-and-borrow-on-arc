@@ -7,7 +7,7 @@
  *   Chain ID : 5042002
  *   RPC      : https://rpc.testnet.arc.network
  *   Native   : USDC (ERC-20 precompile at 0x3600…0000)
- *   Explorer : https://explorer.arc.fun
+ *   Explorer : https://testnet.arcscan.app
  *
  * ethers.js : v5 (loaded via CDN — ethers@5.7.2)
  */

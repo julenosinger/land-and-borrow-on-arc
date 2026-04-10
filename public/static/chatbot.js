@@ -666,7 +666,7 @@ class ChatbotUI {
         ${formattedText}
         ${meta.txHash ? `
           <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1)">
-            <a href="${window.ARC_EXPLORER || 'https://explorer.arc.fun'}/tx/${meta.txHash}" target="_blank"
+            <a href="${window.ARC_EXPLORER || 'https://testnet.arcscan.app'}/tx/${meta.txHash}" target="_blank"
               style="color:var(--cyan);font-size:11px;">View transaction →</a>
           </div>
         ` : ''}

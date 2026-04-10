@@ -683,7 +683,7 @@ function showLoanSuccessModal(loanId, txHash) {
         <div class="card card-sm" style="background:var(--bg-input); text-align:left;">
           <div class="detail-row"><span class="detail-label">Loan ID</span><span class="detail-value mono">#${loanId}</span></div>
           <div class="detail-row" style="border:none;"><span class="detail-label">Tx Hash</span>
-            <a href="https://explorer.arc.fun/tx/${txHash}" target="_blank" class="underline-link mono text-xs">${txHash.slice(0,16)}…</a>
+            <a href="https://testnet.arcscan.app/tx/${txHash}" target="_blank" class="underline-link mono text-xs">${txHash.slice(0,16)}…</a>
           </div>
         </div>
         <div style="font-size:13px; color:var(--text-muted);">A lender will review your request and set the interest rate. You'll see updates in your Dashboard.</div>
@@ -1241,7 +1241,7 @@ async function addArcNetwork() {
         chainName: 'Arc Testnet',
         nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 6 },
         rpcUrls: ['https://rpc.testnet.arc.network'],
-        blockExplorerUrls: ['https://explorer.arc.fun']
+        blockExplorerUrls: ['https://testnet.arcscan.app']
       }]
     });
     showToast('Arc Testnet added to wallet ✓', 'success');
