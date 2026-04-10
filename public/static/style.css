@@ -126,11 +126,11 @@ html:not(.light) .top-header {
 }
 .header-logo .logo-icon {
   width: 36px; height: 36px;
-  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  background: #0f172a;
+  border: 1.5px solid rgba(56,189,248,0.35);
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 4px 12px rgba(6,182,212,0.35);
+  box-shadow: 0 4px 12px rgba(6,182,212,0.25);
 }
 .header-logo .logo-text { color: var(--text-primary); }
 .header-logo .logo-fi   { color: var(--cyan); }
@@ -1233,7 +1233,7 @@ html.light .grid-bg {
   display: flex; align-items: center; gap: 8px;
   margin-bottom: 10px;
 }
-.footer-logo-icon { font-size: 20px; line-height: 1; }
+.footer-logo-icon { display:inline-flex; align-items:center; justify-content:center; line-height: 1; }
 .footer-logo-text {
   font-size: 19px; font-weight: 800;
   letter-spacing: -0.5px;

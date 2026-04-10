@@ -156,7 +156,7 @@ app.get('/', (c) => {
 <!-- ════ HEADER ════ -->
 <header class="top-header">
   <a class="header-logo" onclick="showPage('home')" style="text-decoration:none">
-    <div class="logo-icon">⚡</div>
+    <div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22"><defs><linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#818cf8"/></linearGradient></defs><path d="M4 4 L4 20 L12 20 C17.523 20 22 16.418 22 12 C22 7.582 17.523 4 12 4 Z" fill="none" stroke="url(#lg1)" stroke-width="2.2" stroke-linejoin="round"/><path d="M7.5 8 L7.5 16 L11.5 16 C14.538 16 17 14.209 17 12 C17 9.791 14.538 8 11.5 8 Z" fill="url(#lg1)" opacity="0.3"/></svg></div>
     <span class="logo-text">Daat<span class="logo-fi">FI</span></span>
   </a>
 
@@ -1518,7 +1518,7 @@ app.get('/', (c) => {
     <!-- Col 1: Brand + Network -->
     <div class="footer-col footer-col-brand">
       <div class="footer-logo">
-        <span class="footer-logo-icon">⚡</span>
+        <span class="footer-logo-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20"><defs><linearGradient id="lg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#818cf8"/></linearGradient></defs><path d="M4 4 L4 20 L12 20 C17.523 20 22 16.418 22 12 C22 7.582 17.523 4 12 4 Z" fill="none" stroke="url(#lg2)" stroke-width="2.2" stroke-linejoin="round"/><path d="M7.5 8 L7.5 16 L11.5 16 C14.538 16 17 14.209 17 12 C17 9.791 14.538 8 11.5 8 Z" fill="url(#lg2)" opacity="0.3"/></svg></span>
         <span class="footer-logo-text">Daat<span class="footer-logo-fi">FI</span></span>
       </div>
       <p class="footer-tagline">Global decentralized lending on Arc Testnet. Hybrid RWA + crypto collateral, USDC payments, AI-powered agent — DaatFI.</p>

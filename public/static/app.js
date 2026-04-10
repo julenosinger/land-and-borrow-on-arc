@@ -1142,7 +1142,7 @@ function showReceiptModal(data) {
     <div class="receipt-paper">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div>
-          <div style="font-size:18px; font-weight:800; color:var(--text-primary);">⚡ DaatFI Receipt</div>
+          <div style="font-size:18px; font-weight:800; color:var(--text-primary);">🧾 DaatFI Receipt</div>
           <div style="font-size:11px; color:var(--text-muted);">Arc Testnet — Chain ID: ${window.ARC_CHAIN_ID}</div>
         </div>
         <div style="font-size:11px; color:var(--text-muted); text-align:right;">${new Date().toLocaleString()}</div>
