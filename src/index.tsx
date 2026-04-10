@@ -38,7 +38,7 @@ app.get('/', (c) => {
 
   <style>
     /* contract config banner */
-    #config-banner {
+    #testnet-banner {
       position: fixed; top: 64px; left: 0; right: 0; z-index: 29;
       background: rgba(245,158,11,0.1);
       border-bottom: 1px solid rgba(245,158,11,0.25);
@@ -47,6 +47,7 @@ app.get('/', (c) => {
       font-size: 12px; color: var(--amber);
       transition: background-color var(--transition);
     }
+    #testnet-banner + #config-banner { display:none !important; }
     .main-with-banner { padding-top: 36px !important; }
     .col-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
     .col-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
@@ -143,15 +144,10 @@ app.get('/', (c) => {
 <body>
 
 <!-- ════ CONFIG BANNER ════ -->
-<div id="config-banner">
-  <i class="fa-solid fa-triangle-exclamation"></i>
-  <span>
-    <strong>Setup Required:</strong> Deploy the smart contract and set addresses in
-    <button onclick="showPage('settings')" style="text-decoration:underline;background:none;border:none;cursor:pointer;color:inherit;font-weight:600;">Settings</button>
-    to enable on-chain features. Arc Testnet — Chain ID: 5042002.
-  </span>
-  <button onclick="document.getElementById('config-banner').style.display='none'" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;font-size:16px;">&times;</button>
+<div id="testnet-banner">
+  <span>⚠ TESTNET ONLY — This application runs exclusively on Arc Testnet. No real funds are used. Do not send mainnet assets.</span>
 </div>
+<div id="config-banner" style="display:none;"></div>
 
 <!-- ════ HEADER ════ -->
 <header class="top-header">
