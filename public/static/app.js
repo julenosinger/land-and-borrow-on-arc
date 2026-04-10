@@ -1432,3 +1432,54 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshOfferBalance && refreshOfferBalance();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Circle Faucet — request testnet USDC via server-side proxy
+// ─────────────────────────────────────────────────────────────────────────────
+async function circleRequestFaucet() {
+  const statusEl = document.getElementById('faucet-status');
+  const btn = document.querySelector('[onclick="circleRequestFaucet()"]');
+
+  // Require connected wallet
+  const address = window.web3?.address;
+  if (!address) {
+    showToast('Connect your wallet first to receive testnet USDC.', 'warning');
+    return;
+  }
+
+  // UI: loading
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Requesting…'; }
+  if (statusEl) { statusEl.style.display = 'none'; }
+
+  try {
+    const res = await fetch('/api/circle/faucet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = '<div class="legal-banner legal-banner-info"><i class="fa-solid fa-check-circle"></i><span>Testnet USDC requested successfully! Tokens will arrive in your wallet shortly.</span></div>';
+      }
+      showToast('✅ Testnet USDC requested via Circle! Check your wallet in a few seconds.', 'success', 6000);
+    } else {
+      const msg = data.error || data.detail?.message || 'Request failed';
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = `<div class="legal-banner legal-banner-warning"><i class="fa-solid fa-triangle-exclamation"></i><span>${msg}</span></div>`;
+      }
+      showToast('⚠ Faucet: ' + msg, 'warning', 6000);
+    }
+  } catch (err) {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = '<div class="legal-banner legal-banner-warning"><i class="fa-solid fa-triangle-exclamation"></i><span>Network error. Please try again.</span></div>';
+    }
+    showToast('❌ Faucet request failed: ' + err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-droplet"></i> Request Testnet USDC'; }
+  }
+}

@@ -2,7 +2,11 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
 
-const app = new Hono()
+type Bindings = {
+  CIRCLE_API_KEY: string
+}
+
+const app = new Hono<{ Bindings: Bindings }>()
 
 app.use('*', cors())
 app.use('/static/*', serveStatic({ root: './' }))
@@ -1499,6 +1503,18 @@ app.get('/', (c) => {
           </button>
         </div>
 
+        <!-- Circle Faucet Card -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:6px;"><i class="fa-solid fa-faucet text-cyan"></i>USDC Testnet Faucet</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:14px;">
+            Powered by Circle — request free testnet USDC + native tokens to your connected wallet on Arc Testnet.
+          </div>
+          <div id="faucet-status" style="display:none; margin-bottom:12px;"></div>
+          <button class="btn btn-primary btn-full btn-sm" onclick="circleRequestFaucet()">
+            <i class="fa-solid fa-droplet"></i> Request Testnet USDC
+          </button>
+        </div>
+
         <div class="card">
           <div class="card-title" style="margin-bottom:16px;"><i class="fa-solid fa-palette text-cyan"></i>Appearance</div>
           <div class="flex items-center justify-between">
@@ -1736,6 +1752,76 @@ app.post('/api/offers/meta', async (c) => {
 app.get('/api/offers/meta/:offerId', (c) => {
   const m = offerMeta.get(c.req.param('offerId'))
   return c.json(m || {})
+})
+
+// ── API: Circle — proxy (key stays server-side) ───────────────────────────────
+const CIRCLE_BASE = 'https://api.circle.com/v1/w3s'
+
+// GET /api/circle/faucet?address=0x...  → request testnet USDC
+app.post('/api/circle/faucet', async (c) => {
+  const key = c.env.CIRCLE_API_KEY
+  if (!key) return c.json({ error: 'Circle API not configured' }, 503)
+  try {
+    const { address } = await c.req.json() as { address?: string }
+    if (!address) return c.json({ error: 'address required' }, 400)
+    const res = await fetch(`${CIRCLE_BASE}/testnet/faucet`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ blockchain: 'ARC-TESTNET', address, usdc: true, native: true })
+    })
+    const text = await res.text()
+    const data = text ? JSON.parse(text) : {}
+    if (res.status === 204 || res.ok) return c.json({ success: true })
+    return c.json({ error: data?.message || 'Faucet request failed', detail: data }, res.status as any)
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500)
+  }
+})
+
+// GET /api/circle/balance?address=0x...  → USDC balance via Circle
+app.get('/api/circle/balance', async (c) => {
+  const key = c.env.CIRCLE_API_KEY
+  if (!key) return c.json({ error: 'Circle API not configured' }, 503)
+  try {
+    const address = c.req.query('address')
+    if (!address) return c.json({ error: 'address required' }, 400)
+    // List wallets filtered by address
+    const res = await fetch(`${CIRCLE_BASE}/wallets?blockchain=ARC-TESTNET&pageSize=50`, {
+      headers: { 'Authorization': `Bearer ${key}` }
+    })
+    const data = await res.json() as any
+    const wallet = data?.data?.wallets?.find(
+      (w: any) => w.address?.toLowerCase() === address.toLowerCase()
+    )
+    return c.json({ address, walletId: wallet?.id || null, found: !!wallet })
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500)
+  }
+})
+
+// GET /api/circle/wallets  → list all Circle wallets on ARC-TESTNET
+app.get('/api/circle/wallets', async (c) => {
+  const key = c.env.CIRCLE_API_KEY
+  if (!key) return c.json({ error: 'Circle API not configured' }, 503)
+  try {
+    const res = await fetch(`${CIRCLE_BASE}/wallets?blockchain=ARC-TESTNET&pageSize=50`, {
+      headers: { 'Authorization': `Bearer ${key}` }
+    })
+    const data = await res.json() as any
+    const wallets = (data?.data?.wallets || []).map((w: any) => ({
+      id: w.id,
+      address: w.address,
+      state: w.state,
+      custodyType: w.custodyType,
+      createDate: w.createDate
+    }))
+    return c.json({ wallets, count: wallets.length })
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500)
+  }
 })
 
 export default app
