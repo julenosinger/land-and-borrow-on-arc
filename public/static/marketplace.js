@@ -26,6 +26,8 @@ const MP = {
     sortBy:      'newest'  // 'newest' | 'amount_asc' | 'amount_desc' | 'installments'
   }
 };
+// Expose MP state globally so other modules (e.g. docs-viewer) can access cached loans
+window.MP = MP;
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  HELPERS
@@ -431,6 +433,11 @@ function _mpBuildCard(loan) {
         <button class="btn btn-secondary btn-sm" onclick="mpViewLoanDetail(${loan.id})" title="View full details">
           <i class="fa-solid fa-eye"></i> Details
         </button>
+        ${!isBorrower && loan.collateral && loan.collateral.colTypeLabel === 'RWA'
+          ? `<button class="btn btn-secondary btn-sm" onclick="(function(id){var cached=window.MP&&window.MP.allLoans?window.MP.allLoans.find(function(x){return String(x.id)===String(id);}):null;if(cached&&cached.collateral&&window.DOCS){window.DOCS.open(id,cached.collateral);}else{mpViewLoanDetail(id);}})(${loan.id})" title="View borrower proof documents">
+               <i class="fa-solid fa-folder-open"></i> Documents
+             </button>`
+          : ''}
         ${isBorrower
           ? `<button class="btn btn-secondary btn-sm" disabled title="This is your own request" style="opacity:.5; cursor:not-allowed;">
                <i class="fa-solid fa-lock"></i> Own Request
@@ -743,6 +750,10 @@ async function mpViewLoanDetail(loanId) {
       ? [{ label: 'Close', onClick: (c) => c() }]
       : [
           { label: 'Close',    onClick: (c) => c() },
+          { label: '<i class="fa-solid fa-folder-open"></i> Borrower Documents',
+            primary: false,
+            onClick: (c) => { c(); if (window.DOCS) window.DOCS.open(loanId, col); }
+          },
           { label: '<i class="fa-solid fa-bolt"></i> Fund This Loan', primary: true,
             onClick: (c) => { c(); mpOpenFundModal(loanId); }
           }
@@ -954,6 +965,11 @@ async function loadMyLending() {
                   <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})">
                     <i class="fa-solid fa-eye"></i>
                   </button>
+                  ${loan.collateral?.colTypeLabel === 'RWA'
+                    ? `<button class="btn btn-secondary btn-sm" onclick="window.DOCS&&window.DOCS.open(${loan.id},null)" title="View borrower documents" style="color:var(--cyan);">
+                         <i class="fa-solid fa-folder-open"></i>
+                       </button>`
+                    : ''}
                   ${typeof _rcptBtnHtml === 'function' ? _rcptBtnHtml(loan.id, 'LOAN_FUNDED') : ''}
                 </div>
               </td>
@@ -990,6 +1006,11 @@ async function loadMyLending() {
                 <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})">
                   <i class="fa-solid fa-eye"></i>
                 </button>
+                ${loan.collateral?.colTypeLabel === 'RWA'
+                  ? `<button class="btn btn-secondary btn-sm" onclick="window.DOCS&&window.DOCS.open(${loan.id},null)" title="View borrower documents" style="color:var(--cyan);">
+                       <i class="fa-solid fa-folder-open"></i>
+                     </button>`
+                  : ''}
                 ${typeof _rcptBtnHtml === 'function'
                   ? _rcptBtnHtml(loan.id, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED')
                   : ''}

@@ -884,6 +884,10 @@ async function viewLoanDetails(loanId) {
     `,
     actions: [
       { label: 'Close', onClick: (c) => c() },
+      ...(col && col.colTypeLabel === 'RWA'
+        ? [{ label: '<i class="fa-solid fa-folder-open"></i> Borrower Documents', primary: false,
+             onClick: (c) => { c(); if (window.DOCS) window.DOCS.open(loanId, col); } }]
+        : []),
       ...(['Active','Repaid'].includes(loan.statusLabel) && window.RCPT?.getForLoan(loanId, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED')
         ? [{ label: '<i class="fa-solid fa-file-pdf"></i> View Receipt', primary: false,
              onClick: (c) => { viewLoanReceipt(loanId, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED'); } }]
@@ -960,6 +964,11 @@ async function loadDashboard() {
         <td>
           <div class="flex" style="gap:6px; flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})"><i class="fa-solid fa-eye"></i></button>
+            ${loan.collateral?.colTypeLabel === 'RWA' && (loan.collateral?.documentURI || loan.collateral?.documentHash)
+              ? `<button class="btn btn-secondary btn-sm" onclick="window.DOCS&&window.DOCS.open(${loan.id},null)" title="View your submitted documents" style="color:var(--cyan);">
+                   <i class="fa-solid fa-folder-open"></i>
+                 </button>`
+              : ''}
             ${loan.statusLabel === 'Active' ? `
               <button class="btn btn-primary btn-sm" onclick="showPage('payments'); setTimeout(()=>loadLoanInstallments(${loan.id}),300)">
                 <i class="fa-solid fa-credit-card"></i> Pay

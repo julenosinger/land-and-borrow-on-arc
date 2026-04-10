@@ -1878,6 +1878,7 @@ app.get('/', (c) => {
 <script src="/static/chatbot.js"></script>
 <script src="/static/marketplace.js"></script>
 <script src="/static/receipt.js"></script>
+<script src="/static/docs-viewer.js"></script>
 <script src="/static/security.js"></script>
 <script src="/static/app.js"></script>
 </body>
