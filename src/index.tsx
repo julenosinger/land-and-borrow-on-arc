@@ -934,10 +934,14 @@ app.get('/', (c) => {
               <span class="bw-calc-label">Total interest</span>
               <span class="bw-calc-value bw-calc-value-muted" id="prev-interest">—</span>
             </div>
+            <div class="bw-calc-cell" style="border-top:1px solid var(--border);">
+              <span class="bw-calc-label">Platform fee (2%)</span>
+              <span class="bw-calc-value" style="color:var(--amber);" id="prev-fee">—</span>
+            </div>
           </div>
           <div class="bw-calc-note-banner">
             <i class="fa-solid fa-circle-info"></i>
-            Final rate is set by your lender (≤ 5%/month fixed, no compounding).
+            Final rate is set by your lender (≤ 5%/month fixed, no compounding). A 2% platform fee on principal is included in the total.
           </div>
         </div>
 

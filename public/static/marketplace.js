@@ -9,6 +9,9 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+// ── Platform fee (display-only — not enforced on-chain) ────────────────────
+const PLATFORM_FEE_PCT = 0.02; // 2% flat fee on principal
+
 // ── Module state ──────────────────────────────────────────────────────────────
 const MP = {
   allLoans:      [],   // raw normalised loans from chain
@@ -552,7 +555,8 @@ function mpUpdateFundPreview(loanId) {
   const principal = parseFloat(loan.principalAmount);
   const n         = loan.totalInstallments;
   const interest  = (principal * (rate / 100) * n).toFixed(2);
-  const total     = (principal + parseFloat(interest)).toFixed(2);
+  const fee       = (principal * PLATFORM_FEE_PCT).toFixed(2);
+  const total     = (principal + parseFloat(interest) + parseFloat(fee)).toFixed(2);
   const instAmt   = (parseFloat(total) / n).toFixed(2);
 
   const rows = document.getElementById('mp-fund-preview-rows');
@@ -560,7 +564,8 @@ function mpUpdateFundPreview(loanId) {
   rows.innerHTML = `
     <div class="detail-row"><span class="detail-label">You send now</span><span class="detail-value mono text-amber">$${mpFmt(principal)} USDC</span></div>
     <div class="detail-row"><span class="detail-label">Interest earned</span><span class="detail-value mono text-green">+$${interest} USDC</span></div>
-    <div class="detail-row"><span class="detail-label">You receive back</span><span class="detail-value mono font-bold">$${total} USDC</span></div>
+    <div class="detail-row"><span class="detail-label">Platform fee (2%)</span><span class="detail-value mono" style="color:var(--amber);">$${fee} USDC</span></div>
+    <div class="detail-row"><span class="detail-label">Borrower repays total</span><span class="detail-value mono font-bold">$${total} USDC</span></div>
     <div class="detail-row" style="border:none;"><span class="detail-label">Per installment</span><span class="detail-value mono text-cyan">$${instAmt} USDC</span></div>`;
 }
 
@@ -731,7 +736,8 @@ async function mpViewLoanDetail(loanId) {
             <div class="card-title" style="font-size:12px; color:var(--cyan); margin-bottom:10px;">📊 Risk Assessment</div>
             <div class="detail-row"><span class="detail-label">Risk Level</span><span class="detail-value">${risk.icon} ${risk.label}</span></div>
             <div class="detail-row"><span class="detail-label">Max Interest</span><span class="detail-value text-green mono">+$${(parseFloat(loan.principalAmount)*0.05*loan.totalInstallments).toFixed(2)}</span></div>
-            <div class="detail-row" style="border:none;"><span class="detail-label">Max Return</span><span class="detail-value mono">$${(parseFloat(loan.principalAmount)*1.05*loan.totalInstallments/loan.totalInstallments + parseFloat(loan.principalAmount)*(1-1)).toFixed(2)}</span></div>
+            <div class="detail-row"><span class="detail-label">Platform Fee (2%)</span><span class="detail-value mono" style="color:var(--amber);">$${(parseFloat(loan.principalAmount)*PLATFORM_FEE_PCT).toFixed(2)} USDC</span></div>
+            <div class="detail-row" style="border:none;"><span class="detail-label">Max Return (lender)</span><span class="detail-value mono">$${(parseFloat(loan.principalAmount)*1.05*loan.totalInstallments/loan.totalInstallments + parseFloat(loan.principalAmount)*(1-1)).toFixed(2)}</span></div>
           </div>
         </div>
       </div>

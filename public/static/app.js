@@ -3,6 +3,9 @@
  * Dark/Light mode · English · Arc Testnet · Production Grade
  */
 
+// ── Platform fee (display-only — not enforced on-chain) ────────────────────
+const PLATFORM_FEE_PCT = 0.02; // 2% flat fee on principal
+
 // ══════════════════════════════════════════════════════════════
 // THEME
 // ══════════════════════════════════════════════════════════════
@@ -388,11 +391,12 @@ function updateLoanPreview() {
 
   if (!amount || !installments) { if(preview) preview.style.display = 'none'; return; }
 
-  // Max rate preview
+  // Max rate preview (worst-case 5%/mo) + 2% platform fee on principal
   const monthlyRate = 0.05;
   const totalInterest = amount * monthlyRate * installments;
-  const total = amount + totalInterest;
-  const perInst = total / installments;
+  const platformFee   = amount * PLATFORM_FEE_PCT;
+  const total    = amount + totalInterest + platformFee;
+  const perInst  = total / installments;
 
   const fmt = n => `$${n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
   document.getElementById('prev-principal').textContent = fmt(amount);
@@ -400,6 +404,8 @@ function updateLoanPreview() {
   document.getElementById('prev-inst').textContent      = fmt(perInst);
   const interestEl = document.getElementById('prev-interest');
   if (interestEl) interestEl.textContent = fmt(totalInterest);
+  const feeEl = document.getElementById('prev-fee');
+  if (feeEl) feeEl.textContent = fmt(platformFee);
   if(preview) preview.style.display = 'block';
 }
 
@@ -828,7 +834,8 @@ async function viewLoanDetails(loanId) {
           <div class="card card-sm" style="background:var(--bg-input);">
             <div class="card-title" style="font-size:13px; margin-bottom:12px; color:var(--cyan);">💵 Loan Terms</div>
             <div class="detail-row"><span class="detail-label">Principal</span><span class="detail-value mono text-cyan">$${parseFloat(loan.principalAmount).toFixed(2)}</span></div>
-            <div class="detail-row"><span class="detail-label">Total Repayable</span><span class="detail-value mono">$${parseFloat(loan.totalRepayable||0).toFixed(2)}</span></div>
+            <div class="detail-row"><span class="detail-label">Total Repayable</span><span class="detail-value mono">$${(parseFloat(loan.totalRepayable||0) + parseFloat(loan.principalAmount||0) * PLATFORM_FEE_PCT).toFixed(2)}</span></div>
+            <div class="detail-row"><span class="detail-label">Platform Fee (2%)</span><span class="detail-value mono" style="color:var(--amber);">$${(parseFloat(loan.principalAmount||0) * PLATFORM_FEE_PCT).toFixed(2)} USDC</span></div>
             <div class="detail-row"><span class="detail-label">Interest Rate</span><span class="detail-value">${loan.interestRateMonthly > 0 ? loan.interestRateMonthly + '%' : 'Set by lender'} / month</span></div>
             <div class="detail-row"><span class="detail-label">Installments</span><span class="detail-value">${loan.paidInstallments}/${loan.totalInstallments} paid</span></div>
             <div class="detail-row" style="border:none;"><span class="detail-label">Status</span>${statusBadge(loan.statusLabel)}</div>
