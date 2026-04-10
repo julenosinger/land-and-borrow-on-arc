@@ -1,252 +1,222 @@
-# ⚡ ArcFi — Global Decentralized Lending Platform
+# ⚡ ArcFi — Global Decentralized Loan Marketplace
 
-> **Production-grade DeFi lending protocol on Arc Testnet (Chain ID: 5042002)**  
-> Hybrid RWA + Crypto collateral · USDC payments · AI-powered agent · Dark/Light mode
+[![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-Chain%205042002-06b6d4?style=for-the-badge&logo=ethereum)](https://arc.fun)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Stack](https://img.shields.io/badge/Stack-Hono%20%2B%20Solidity%20%2B%20ethers.js-8b5cf6?style=for-the-badge)](https://hono.dev)
 
-![ArcFi Banner](https://img.shields.io/badge/Arc%20Testnet-Chain%205042002-06b6d4?style=for-the-badge&logo=ethereum)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Stack](https://img.shields.io/badge/Stack-Hono%20%2B%20Solidity%20%2B%20ethers.js-8b5cf6?style=for-the-badge)
-
----
-
-## 🌐 Live Demo
-
-**🚀 Production:** [https://arcfi.pages.dev](https://arcfi.pages.dev)  
-**🔀 Latest Deploy:** [https://316d6a9a.arcfi.pages.dev](https://316d6a9a.arcfi.pages.dev)  
-**🏥 Health Check:** [https://arcfi.pages.dev/api/health](https://arcfi.pages.dev/api/health)
+Production-grade, fully decentralized lending protocol on Arc Testnet (Chain ID: 5042002). Supports hybrid RWA + Crypto collateral, USDC payments, a live loan marketplace, AI-powered agent, and automated installments — all non-custodial.
 
 ---
 
-## 📋 Features
+## 🌐 Live URLs
 
-### 🏦 Core Lending
-| Feature | Description |
+| Environment | URL |
 |---|---|
-| **Loan Creation** | Full 4-step wizard: personal info, loan amount, collateral, review & sign |
-| **Fixed Interest** | Max 5%/month — no compounding, no tricks |
-| **Installments** | 1–10 installments with automated due-date schedule |
-| **Global Support** | Borrowers and lenders from any country, individuals and companies |
+| **Production (Cloudflare)** | https://arcfi.pages.dev |
+| **Latest Deployment** | https://1bc0867a.arcfi.pages.dev |
+| **GitHub** | https://github.com/julenosinger/land-and-borrow-on-arc |
+| **API Health** | https://arcfi.pages.dev/api/health |
+| **Sandbox Dev** | https://3000-i1q3eb8rzfef64ns18bvp-3844e1b6.sandbox.novita.ai |
 
-### 🛡️ Hybrid Collateral System
-| Type | Enforcement | Details |
-|---|---|---|
-| **RWA (Real-World Asset)** | Off-chain (legal) | Car, house, jewelry, land, custom — notarized doc hash on-chain via IPFS |
-| **Crypto Escrow** | On-chain (automatic) | USDC / ERC-20 locked in contract — min 120% ratio — auto-release on repayment |
+---
 
-### 💰 Payment Infrastructure
-- Per-installment USDC payments with one click
-- Full loan repayment with batch execution
-- Payment history with tx hashes
-- On-chain receipt generation after every payment
-- Wallet balance display (real-time USDC)
+## ✅ Completed Features
 
-### 🤖 AI Agent (Chatbot)
-Natural language commands executed on-chain:
-```
-"Pay next installment"      → confirms → executes on-chain
-"Pay full loan"             → iterates all pending → confirms → pays
-"How much do I owe?"        → reads contract state
-"Show my payment history"   → lists all paid installments
-"Check my loan status"      → full loan details
-"When is my next payment?"  → due date + amount
-```
+### 🏪 Loan Marketplace (NEW)
+- Browse active lender offers with real-time on-chain data
+- Filter by: amount range, interest rate, installments, collateral type, lender type
+- Each listing shows: lender name/wallet, rate, max installments, liquidity, collateral, risk indicator, utilization
+- "Apply for Loan" CTA pre-fills the borrow wizard with offer terms
 
-### 🏛️ Lender Dashboard
-- View all loan requests in a sortable table
-- Filter by: All / Pending / Active / Completed
-- Approve loans: set interest rate (≤ 5%) + installment interval
-- Reject loans (returns crypto collateral)
-- Verify RWA documents on-chain
-- Disburse USDC directly to borrower
+### 🏦 Lender Offer Creation (NEW)
+- Lender identity: name/company, type (individual/company), auto-detected wallet
+- Liquidity lock: deposit USDC into smart contract escrow
+- Terms: interest rate (≤5%/month), max installments (1–10), loan amount range
+- Collateral preferences: RWA only / Crypto only / Both, min collateral ratio
+- Geographic restrictions, borrower profile preferences
+- Liquidity management: add, withdraw unused, pause, resume, close offer
 
-### 🎨 UI/UX
-- **Dark mode** (default) + **Light mode** toggle
-- Responsive design — works on mobile
-- Real-time toast notifications
-- Animated progress bars
-- On-chain receipt modal with explorer links
-- Modern DeFi aesthetic with gradient accents
+### 💧 Liquidity Lock Mechanism (NEW)
+- USDC locked on-chain in `LoanMarketplace.sol`
+- Available vs. allocated liquidity tracked per offer
+- Prevents over-allocation / double-spending
+- Auto-releases repaid amounts back to available pool
+
+### 📊 My Lending Activity (NEW)
+- Summary stats: active offers, total deployed, total repaid, active loans
+- Offers table with utilization bars, action buttons (add/withdraw/pause/resume/close)
+- Active loans table from all my offers with borrower info and progress
+- ROI calculation via on-chain data
+
+### 🤖 AI Agent Marketplace Commands (NEW)
+- "Browse marketplace" — navigates to marketplace
+- "Create a loan offer" — guided offer creation flow
+- "Show my offers" — lists all lender offers with details
+- "How much liquidity do I have?" — full liquidity breakdown
+- "Pause my offer" — guides to My Lending page
+- "Resume my offer" — same
+
+### 🏠 Core Lending Platform
+- 4-step Borrow Wizard (personal info, loan details, collateral, review)
+- RWA collateral: SHA-256 document hash, IPFS upload, on-chain storage
+- Crypto collateral: USDC/ERC-20 escrow, ≥120% ratio, auto-release/liquidation
+- Lender Dashboard: view requests, approve/reject, set rate, disburse USDC
+- My Dashboard: loan stats, progress, payment shortcuts
+- Payment Center: installment schedule, pay buttons, full repayment
+- Receipt system: tx hash, amounts, Explorer link, API storage
+- Dark/Light mode toggle, persisted in localStorage
+
+### 🤖 AI Chatbot (Extended)
+All previous + new marketplace commands:
+- "Pay next installment", "Pay full loan", "Pay installment #2"
+- "How much do I owe?", "Check my loan status", "Show payment history"
+- "Browse marketplace", "Create a loan offer", "Show my offers"
+- "How much liquidity do I have?", "Pause my offer"
 
 ---
 
 ## 🏗️ Architecture
 
-```
-arcfi/
-├── contracts/
-│   └── LoanPlatform.sol          # Main smart contract (Solidity 0.8.20)
-├── src/
-│   └── index.tsx                 # Hono backend (API routes + HTML)
-├── public/static/
-│   ├── style.css                 # Global styles + dark/light CSS vars
-│   ├── contractABI.js            # Contract ABI + Arc Testnet config
-│   ├── web3Manager.js            # Wallet connection + contract interactions
-│   ├── ui.js                     # UI utilities (toast, modal, badges)
-│   ├── chatbot.js                # AI agent + intent classification
-│   └── app.js                   # Main application logic (SPA)
-├── ecosystem.config.cjs          # PM2 config for local dev
-├── wrangler.jsonc                # Cloudflare Pages config
-├── vite.config.ts                # Vite build config
-└── package.json
-```
+### Smart Contracts (Arc Testnet)
 
----
-
-## ⛓️ Smart Contract
-
-**`contracts/LoanPlatform.sol`** — Deployed on Arc Testnet
-
-### Key Functions
-| Function | Role | Description |
-|---|---|---|
-| `createLoanWithRWA()` | Borrower | Creates loan with real-world asset collateral |
-| `createLoanWithCrypto()` | Borrower | Creates loan + locks ERC-20 collateral in escrow |
-| `approveLoan()` | Lender | Approves + sets rate + generates installment schedule |
-| `rejectLoan()` | Lender | Rejects request, releases crypto collateral |
-| `verifyRWA()` | Lender | Marks RWA document as verified on-chain |
-| `disburseLoan()` | Lender | Sends USDC principal to borrower |
-| `payInstallment()` | Borrower | Pays specific installment + generates receipt hash |
-| `payNextInstallment()` | Borrower | Convenience — pays next pending installment |
-| `liquidateCollateral()` | Lender | Seizes crypto collateral after 3-day grace period |
-| `cancelLoan()` | Borrower | Cancels pending loan, returns collateral |
-
-### Loan Lifecycle
-```
-PENDING → APPROVED → ACTIVE → COMPLETED
-                    ↘ DEFAULTED
-         REJECTED
-CANCELLED
-```
-
-### Interest Formula
-```
-totalInterest = principal × (rate/10000) × months
-installmentAmount = (principal + totalInterest) / n
-// NO compounding — fixed linear interest only
-```
-
----
-
-## 🚀 Setup & Deployment
-
-### Prerequisites
-- Node.js 18+
-- MetaMask or compatible Web3 wallet
-- Arc Testnet configured in wallet
-
-### Add Arc Testnet to MetaMask
-| Field | Value |
+| Contract | Description |
 |---|---|
-| Network Name | Arc Testnet |
-| RPC URL | `https://rpc.arc.fun` |
-| Chain ID | `5042002` |
-| Currency Symbol | ARC |
-| Block Explorer | `https://explorer.arc.fun` |
+| `LoanPlatform.sol` | Core loan lifecycle, collateral, installments, receipts |
+| `LoanMarketplace.sol` | Offer creation, liquidity lock, allocation, repayment routing |
 
-### Local Development
-```bash
-# Clone
-git clone https://github.com/julenosinger/land-and-borrow-on-arc.git
-cd land-and-borrow-on-arc
+**Deploying with Remix:**
+1. Open https://remix.ethereum.org
+2. Connect MetaMask to Arc Testnet (Chain ID: 5042002, RPC: https://rpc.arc.fun)
+3. Deploy `LoanPlatform.sol` with USDC address as constructor arg
+4. Deploy `LoanMarketplace.sol` with USDC address
+5. Call `setLoanPlatform(address)` on Marketplace with LoanPlatform address
+6. Enter both addresses in ArcFi Settings
 
-# Install
-npm install
+### Frontend Architecture
 
-# Build
-npm run build
-
-# Start (PM2)
-pm2 start ecosystem.config.cjs
-
-# Or without PM2
-npx wrangler pages dev dist --port 3000
+```
+public/static/
+├── contractABI.js     — LoanPlatform + LoanMarketplace + ERC20 ABIs
+├── web3Manager.js     — Wallet + blockchain operations (marketplace methods added)
+├── marketplace.js     — Marketplace page, offer creation, My Lending Activity
+├── app.js             — Navigation, borrow wizard, payments, settings
+├── chatbot.js         — AI agent with marketplace intent classification
+├── ui.js              — Shared UI utilities
+└── style.css          — Dark/light theme, offer cards, marketplace styles
 ```
 
-### Deploy to Cloudflare Pages
-```bash
-# Build
-npm run build
+### Backend (Hono on Cloudflare Workers)
 
-# Deploy
-npx wrangler pages deploy dist --project-name arcfi
-
-# Set secrets (if needed)
-npx wrangler pages secret put PINATA_API_KEY --project-name arcfi
-```
-
-### Deploy Smart Contract
-1. Open `contracts/LoanPlatform.sol` in [Remix IDE](https://remix.ethereum.org)
-2. Compile with Solidity `^0.8.20`
-3. Connect MetaMask to Arc Testnet (Chain ID: 5042002)
-4. Deploy with USDC token address as constructor argument
-5. Copy the deployed contract address
-6. In the app → **Settings** → paste the contract address and USDC address
+| Route | Description |
+|---|---|
+| `GET /` | SPA entry point |
+| `GET /api/health` | Status check (marketplace: true) |
+| `POST /api/receipts` | Store payment receipt |
+| `GET /api/receipts/:id` | Retrieve receipt |
+| `POST /api/loans/meta` | Cache loan off-chain metadata |
+| `GET /api/loans/meta/:id` | Retrieve loan metadata |
+| `POST /api/offers/meta` | Cache offer off-chain metadata |
+| `GET /api/offers/meta/:id` | Retrieve offer metadata |
 
 ---
 
-## ⚙️ Configuration (Settings Page)
+## 📋 Data Models
 
-After deploying the contract, go to the **Settings** page in the app and fill in:
+### LenderOffer (on-chain)
+```solidity
+struct LenderOffer {
+  uint256 id;
+  address lender;
+  string  lenderName;
+  LenderType lenderType;           // Individual | Company
+  uint256 totalLiquidity;          // USDC deposited (6 dec)
+  uint256 availableLiquidity;      // Unallocated
+  uint256 allocatedLiquidity;      // In active loans
+  uint256 interestRateBps;         // e.g. 300 = 3%/month
+  uint256 maxInstallments;         // 1-10
+  uint256 minLoanAmount;           // USDC (6 dec)
+  uint256 maxLoanAmount;           // USDC (6 dec)
+  uint8   acceptedCollateral;      // 1=RWA, 2=Crypto, 3=Both
+  uint256 minCollateralRatioBps;   // e.g. 12000 = 120%
+  string  geoRestrictions;         // "US,EU" or "GLOBAL"
+  string  borrowerPreferences;     // free text
+  OfferStatus status;              // ACTIVE | PAUSED | CLOSED
+  uint256 createdAt;
+  uint256 totalLoansIssued;
+  uint256 totalRepaid;
+  uint256[] activeLoanIds;
+}
+```
 
-| Field | Description |
-|---|---|
-| **LoanPlatform Contract** | Deployed address on Arc Testnet |
-| **USDC Token Address** | USDC contract address on Arc Testnet |
-| **Pinata API Key** | Optional — for IPFS document uploads |
-| **Pinata Secret Key** | Optional — for IPFS document uploads |
+### LoanPlatform Core (existing)
+- Borrower info (name, email, country, city, employment)
+- Loan terms (principal, rate bps, installments, total repayable)
+- Collateral (RWA: hash/URI/value/jurisdiction | CRYPTO: token/amount/ratio)
+- Installment schedule with due dates, paid dates, tx hashes
+- Lifecycle: PENDING → APPROVED → ACTIVE → COMPLETED / DEFAULTED
 
 ---
 
-## 🔐 Security Model
+## 🚀 Setup Guide
 
-| Layer | Mechanism |
-|---|---|
-| **Wallet auth** | All write operations require wallet signature |
-| **Interest cap** | Hard-coded 5%/month maximum in contract |
-| **Collateral safety** | Min 120% ratio required for crypto collateral |
-| **Overpayment prevention** | Contract validates installment status before payment |
-| **Duplicate doc prevention** | `usedDocumentHashes` mapping blocks reuse |
-| **Non-custodial** | Platform never holds user funds — only smart contract escrow |
-| **Liquidation grace** | 3-day grace period before lender can liquidate |
+### 1. Add Arc Testnet to MetaMask
+- Network: Arc Testnet
+- Chain ID: 5042002
+- RPC: https://rpc.arc.fun
+- Explorer: https://explorer.arc.fun
+- Currency: ARC
+
+Or click "Add Arc Network to Wallet" in Settings.
+
+### 2. Deploy Smart Contracts
+```
+Remix IDE → Deploy LoanPlatform.sol (pass USDC address)
+Remix IDE → Deploy LoanMarketplace.sol (pass USDC address)
+LoanMarketplace.setLoanPlatform(loanPlatformAddress)
+```
+
+### 3. Configure ArcFi
+- Go to Settings
+- Enter LoanPlatform address
+- Enter LoanMarketplace address
+- Enter USDC token address
+- (Optional) Enter Pinata API keys for IPFS
+
+### 4. For Lenders
+1. Go to **Lend** → Create Offer
+2. Enter name, liquidity (USDC), rate (≤5%), terms
+3. Click "Lock Liquidity & Create Offer" → approve USDC + tx
+4. Monitor in **My Lending** page
+
+### 5. For Borrowers
+1. Go to **Marketplace** → browse offers
+2. Click "Apply for Loan" on desired offer
+3. Complete 4-step wizard (personal info, amount, collateral, review)
+4. Sign & submit → loan enters PENDING state
+5. Lender approves from their dashboard → USDC disbursed
+6. Make payments in **Payments** page
 
 ---
 
 ## ⚖️ Legal Disclaimer
 
-- **RWA enforcement is off-chain** — subject to local laws and requires legal proceedings
-- **Crypto enforcement is on-chain** — automatic, trustless, no human intervention
-- ArcFi is a non-custodial protocol — the platform never controls user funds
-- This is deployed on **testnet** — not financial advice, no real money involved
+ArcFi is a **non-custodial, decentralized protocol**. By using ArcFi:
+- Lenders assume full capital risk
+- RWA collateral enforcement is **off-chain** (legal jurisdiction of asset)
+- Crypto collateral enforcement is **on-chain** (automatic smart contract)
+- Interest is fixed, non-compounding, maximum 5%/month
+- ArcFi does not provide financial, legal, or investment advice
 
 ---
 
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Smart Contract** | Solidity 0.8.20 |
-| **Blockchain** | Arc Testnet (Chain ID: 5042002) |
-| **Payments** | USDC (ERC-20) |
-| **Web3** | ethers.js v5 |
-| **Backend** | Hono (Cloudflare Workers) |
-| **Build** | Vite + @hono/vite-build |
-| **Deployment** | Cloudflare Pages |
-| **Frontend** | Vanilla JS + CSS Variables (dark/light) |
-| **Icons** | Font Awesome 6 |
-| **AI Agent** | Custom intent classifier (no external LLM) |
+## 🛡️ Security Features
+- Input validation on all forms (client + contract-level)
+- Wallet connection required for all transactions
+- USDC approval → transfer atomic flow
+- Liquidity allocation prevents over-spending
+- Collateral ratio enforcement (≥120% for crypto)
+- Non-custodial: contracts hold funds, not platform
 
 ---
 
-## 📄 License
-
-MIT — see [LICENSE](LICENSE)
-
----
-
-## 🤝 Contributing
-
-Pull requests welcome. Please open an issue first to discuss major changes.
-
----
-
-*Built with ⚡ on Arc Testnet*
+*Last updated: April 2026 — Arc Testnet Chain ID 5042002*
