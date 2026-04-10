@@ -1,7 +1,7 @@
 /**
- * ArcFi Marketplace v3.0 — Fully On-Chain
+ * DaatFI Marketplace v3.0 — Fully On-Chain
  * ─────────────────────────────────────────────────────────────────────────────
- * All data sourced directly from ArcFiLoanManager on Arc Testnet.
+ * All data sourced directly from DaatFI Loan Manager on Arc Testnet.
  * NO API calls. NO mock data. NO backend. 100% on-chain reads.
  *
  * Marketplace = loans with status Requested (0) and no lender assigned.
@@ -84,7 +84,7 @@ function mpShortAddr(addr) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Main entry: load all loans from ArcFiLoanManager, filter to
+ * Main entry: load all loans from DaatFI Loan Manager, filter to
  * status=Requested (0) + no lender, update stats, render cards.
  *
  * Uses getLoansBatch() for efficiency (single call per N loans).
@@ -97,7 +97,7 @@ async function loadMarketplace(forceRefresh = false) {
   const rc = window.web3?.getReadContract?.();
   if (!rc) {
     _mpShowBanner(container, '🔧', 'Contract Not Configured',
-      'Set the ArcFiLoanManager address in <button onclick="showPage(\'settings\')" class="underline-link" style="background:none;border:none;cursor:pointer;font-family:inherit;">Settings</button>.',
+      'Set the DaatFI Loan Manager address in <button onclick="showPage(\'settings\')" class="underline-link" style="background:none;border:none;cursor:pointer;font-family:inherit;">Settings</button>.',
       false);
     return;
   }

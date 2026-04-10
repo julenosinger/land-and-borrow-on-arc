@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ArcFi DeFi Platform — Global Stylesheet
+   DaatFI Platform — Global Stylesheet
    Dark / Light Mode | English Only | Production Grade
    ═══════════════════════════════════════════════════════════════ */
 
@@ -674,7 +674,7 @@ html.light .collateral-option.selected {
   position: relative; overflow: hidden;
 }
 .receipt-paper::before {
-  content: 'ARCFI';
+  content: 'DAATFI';
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%) rotate(-30deg);
   font-size: 72px; font-weight: 900;

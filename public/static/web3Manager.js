@@ -1,5 +1,5 @@
 /**
- * Web3Manager — ArcFi v2.1
+ * Web3Manager — DaatFI v2.1
  * Handles wallet connections and blockchain interactions for Arc Testnet.
  * Compatible with ArcFiLoanManager v1.0.0 (deployed at CONTRACT_ADDRESS).
  *
@@ -500,7 +500,7 @@ class Web3Manager {
    */
   async rejectLoan(loanId) {
     throw new Error(
-      'Loan rejection is not available in ArcFiLoanManager v1. ' +
+      'Loan rejection is not available in DaatFI Loan Manager v1. ' +
       'Requested loans that are never funded will simply remain pending until the borrower withdraws.'
     );
   }

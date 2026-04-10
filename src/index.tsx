@@ -17,7 +17,7 @@ app.get('/', (c) => {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArcFi — Decentralized Lending Platform</title>
+  <title>DaatFI — Decentralized Lending Platform</title>
   <meta name="description" content="Global decentralized lending on Arc Testnet. Hybrid RWA + crypto collateral, USDC payments, AI-powered agent." />
 
   <!-- Favicon -->
@@ -157,7 +157,7 @@ app.get('/', (c) => {
 <header class="top-header">
   <a class="header-logo" onclick="showPage('home')" style="text-decoration:none">
     <div class="logo-icon">⚡</div>
-    <span class="logo-text">Arc<span class="logo-fi">Fi</span></span>
+    <span class="logo-text">Daat<span class="logo-fi">FI</span></span>
   </a>
 
   <nav class="header-nav">
@@ -317,7 +317,7 @@ app.get('/', (c) => {
       <div class="legal-banner legal-banner-warning">
         <i class="fa-solid fa-scale-balanced" style="flex-shrink:0; margin-top:2px;"></i>
         <div>
-          <strong>Legal Disclaimer:</strong> ArcFi is a non-custodial, decentralized protocol. Real-World Asset (RWA) collateral enforcement is <strong>off-chain</strong> and subject to applicable laws in your jurisdiction. Crypto collateral enforcement is <strong>on-chain</strong> and executed automatically by smart contracts. This platform does not provide financial, legal or investment advice. Use at your own risk.
+          <strong>Legal Disclaimer:</strong> DaatFI is a non-custodial, decentralized protocol. Real-World Asset (RWA) collateral enforcement is <strong>off-chain</strong> and subject to applicable laws in your jurisdiction. Crypto collateral enforcement is <strong>on-chain</strong> and executed automatically by smart contracts. This platform does not provide financial, legal or investment advice. Use at your own risk.
         </div>
       </div>
     </div>
@@ -328,7 +328,7 @@ app.get('/', (c) => {
     <div class="flex items-center justify-between mb-6" style="flex-wrap:wrap; gap:12px;">
       <div>
         <div class="section-title"><i class="fa-solid fa-store text-cyan" style="margin-right:8px;"></i>Loan Marketplace</div>
-        <div class="section-sub" style="margin-bottom:0;">Browse open loan requests on-chain. Fund directly via ArcFiLoanManager.</div>
+        <div class="section-sub" style="margin-bottom:0;">Browse open loan requests on-chain. Fund directly via the DaatFI Loan Manager.</div>
       </div>
       <div class="flex" style="gap:10px; flex-wrap:wrap; align-items:center;">
         <button class="btn btn-primary" onclick="showPage('borrow')">
@@ -406,7 +406,7 @@ app.get('/', (c) => {
       <div class="card" style="padding:48px; text-align:center; grid-column:1/-1;">
         <div class="empty-icon" style="font-size:48px; margin-bottom:12px;">⛓️</div>
         <div class="empty-title">Loading on-chain data…</div>
-        <div class="empty-desc">Reading loan requests from ArcFiLoanManager on Arc Testnet.</div>
+        <div class="empty-desc">Reading loan requests from DaatFI Loan Manager on Arc Testnet.</div>
       </div>
     </div>
 
@@ -415,7 +415,7 @@ app.get('/', (c) => {
       <div class="legal-banner legal-banner-warning">
         <i class="fa-solid fa-scale-balanced" style="flex-shrink:0; margin-top:2px;"></i>
         <div>
-          <strong>Non-Custodial Platform Disclaimer:</strong> ArcFi is a non-custodial protocol. Lenders assume full risk of capital deployment. RWA collateral enforcement is <strong>off-chain</strong>. Crypto collateral enforcement is <strong>on-chain</strong> and automated. Interest rates are fixed and do not compound. This is not financial advice.
+          <strong>Non-Custodial Platform Disclaimer:</strong> DaatFI is a non-custodial protocol. Lenders assume full risk of capital deployment. RWA collateral enforcement is <strong>off-chain</strong>. Crypto collateral enforcement is <strong>on-chain</strong> and automated. Interest rates are fixed and do not compound. This is not financial advice.
         </div>
       </div>
     </div>
@@ -921,7 +921,7 @@ app.get('/', (c) => {
           <div class="bw-legal-notice bw-legal-warning">
             <i class="fa-solid fa-gavel bw-legal-icon"></i>
             <div>
-              <strong>Off-chain enforcement notice:</strong> RWA collateral is legally binding only in your jurisdiction. In case of default, lenders must pursue remedies via local courts. ArcFi facilitates the digital agreement but does not enforce physical asset seizure.
+              <strong>Off-chain enforcement notice:</strong> RWA collateral is legally binding only in your jurisdiction. In case of default, lenders must pursue remedies via local courts. DaatFI facilitates the digital agreement but does not enforce physical asset seizure.
             </div>
           </div>
         </div>
@@ -1103,16 +1103,16 @@ app.get('/', (c) => {
         <!-- How-to Lend Card -->
         <div class="card card-lg">
           <div class="card-header">
-            <div class="card-title"><i class="fa-solid fa-bolt text-cyan"></i>How to Lend on ArcFi</div>
+            <div class="card-title"><i class="fa-solid fa-bolt text-cyan"></i>How to Lend on DaatFI</div>
             <span class="badge badge-active">100% On-Chain</span>
           </div>
           <div class="form-section">
             <div class="legal-banner legal-banner-info" style="margin-bottom:20px;">
               <i class="fa-solid fa-info-circle" style="flex-shrink:0;"></i>
               <div>
-                ArcFi is a fully decentralized, non-custodial lending protocol on Arc Testnet.
+                DaatFI is a fully decentralized, non-custodial lending protocol on Arc Testnet.
                 <strong>No marketplace contract</strong> — lenders fund borrower requests directly through
-                the <code>ArcFiLoanManager</code> contract.
+                the <code>DaatFI Loan Manager</code> contract.
               </div>
             </div>
 
@@ -1421,7 +1421,7 @@ app.get('/', (c) => {
         <div class="card-title" style="margin-bottom:20px;"><i class="fa-solid fa-file-contract text-cyan"></i>Contract Configuration</div>
         <div class="form-section">
           <div class="form-group">
-            <label class="form-label">ArcFiLoanManager Contract Address</label>
+            <label class="form-label">DaatFI Loan Manager Contract Address</label>
             <div class="input-group">
               <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
               <input id="cfg-contract" class="form-control mono" type="text"
@@ -1519,9 +1519,9 @@ app.get('/', (c) => {
     <div class="footer-col footer-col-brand">
       <div class="footer-logo">
         <span class="footer-logo-icon">⚡</span>
-        <span class="footer-logo-text">Arc<span class="footer-logo-fi">Fi</span></span>
+        <span class="footer-logo-text">Daat<span class="footer-logo-fi">FI</span></span>
       </div>
-      <p class="footer-tagline">Global decentralized lending on Arc Testnet. Hybrid RWA + crypto collateral, USDC payments, AI-powered agent.</p>
+      <p class="footer-tagline">Global decentralized lending on Arc Testnet. Hybrid RWA + crypto collateral, USDC payments, AI-powered agent — DaatFI.</p>
       <div class="footer-network-badge">
         <span class="footer-net-dot"></span>
         <span class="footer-net-label">Arc Testnet</span>
@@ -1582,7 +1582,7 @@ app.get('/', (c) => {
   <!-- ── Bottom bar ── -->
   <div class="footer-bottom-bar">
     <div class="footer-bottom-inner">
-      <span>© 2025 ArcFi — Decentralized Lending Protocol</span>
+      <span>© 2025 DaatFI — Decentralized Lending Protocol</span>
       <div class="footer-bottom-dots">
         <span class="footer-bottom-sep">·</span>
         <span>Arc Testnet · Chain ID 5042002</span>
@@ -1602,7 +1602,7 @@ app.get('/', (c) => {
 <div id="modal-container"></div>
 
 <!-- ════ CHATBOT TOGGLE ════ -->
-<button id="chatbot-toggle" title="ArcFi AI Agent">
+<button id="chatbot-toggle" title="DaatFI AI Agent">
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
       d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z"/>
@@ -1615,7 +1615,7 @@ app.get('/', (c) => {
   <div class="chat-header">
     <div class="chat-avatar">🤖</div>
     <div>
-      <div class="chat-agent-name">ArcFi AI Agent</div>
+      <div class="chat-agent-name">DaatFI AI Agent</div>
       <div class="chat-agent-status">
         <span style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite;display:inline-block;"></span>
         Online · Arc Testnet

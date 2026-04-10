@@ -1,5 +1,5 @@
 /**
- * ArcFi — Main Application Logic
+ * DaatFI — Main Application Logic
  * Dark/Light mode · English · Arc Testnet · Production Grade
  */
 
@@ -1142,7 +1142,7 @@ function showReceiptModal(data) {
     <div class="receipt-paper">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div>
-          <div style="font-size:18px; font-weight:800; color:var(--text-primary);">⚡ ArcFi Receipt</div>
+          <div style="font-size:18px; font-weight:800; color:var(--text-primary);">⚡ DaatFI Receipt</div>
           <div style="font-size:11px; color:var(--text-muted);">Arc Testnet — Chain ID: ${window.ARC_CHAIN_ID}</div>
         </div>
         <div style="font-size:11px; color:var(--text-muted); text-align:right;">${new Date().toLocaleString()}</div>
@@ -1386,7 +1386,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Init chatbot welcome message
   setTimeout(() => {
-    addChatMessage('bot', "👋 Hi! I'm **ArcFi AI**. I help you manage loans, payments, and marketplace offers on Arc Testnet.\n\nType **help** to see what I can do!");
+    addChatMessage('bot', "👋 Hi! I'm **DaatFI AI**. I help you manage loans, payments, and marketplace offers on Arc Testnet.\n\nType **help** to see what I can do!");
   }, 1000);
 
   // Auto-connect if previously connected

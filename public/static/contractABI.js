@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-// ArcFi — Contract ABIs & Network Configuration
+// DaatFI — Contract ABIs & Network Configuration
 // ArcFiLoanManager v1.0.0 — DEPLOYED on Arc Testnet
 // ════════════════════════════════════════════════════════════
 

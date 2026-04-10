@@ -251,7 +251,7 @@ const UI = {
       <div class="receipt-container font-mono text-sm">
         <div class="border-b border-dashed border-slate-600 pb-4 mb-4">
           <div class="flex justify-between items-center mb-2">
-            <h3 class="text-lg font-bold text-white">🧾 ARCFI RECEIPT</h3>
+            <h3 class="text-lg font-bold text-white">🧾 DAATFI RECEIPT</h3>
             <span class="text-slate-400 text-xs">${new Date().toISOString()}</span>
           </div>
           <p class="text-slate-500 text-xs">Arc Testnet — Chain ID: ${window.ARC_CHAIN_ID}</p>

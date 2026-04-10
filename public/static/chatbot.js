@@ -1,9 +1,9 @@
 /**
- * ArcFi AI Agent - Intent-based chatbot for loan operations
+ * DaatFI AI Agent - Intent-based chatbot for loan operations
  * Integrates with blockchain via Web3Manager
  */
 
-class ArcFiAgent {
+class DaatFIAgent {
   constructor() {
     this.messages = [];
     this.currentLoanContext = null;
@@ -155,9 +155,9 @@ class ArcFiAgent {
 
   _greet() {
     const greetings = [
-      "Hello! I'm ArcFi AI. I can help you manage your loans, make payments, and check balances. Type **help** to see what I can do.",
+      "Hello! I'm DaatFI AI. I can help you manage your loans, make payments, and check balances. Type **help** to see what I can do.",
       "Hey there! Ready to manage your DeFi loans? I'm your Arc Testnet assistant. Type **help** for commands.",
-      "Welcome to ArcFi! I can pay your installments, check your balance, and more. How can I help?"
+      "Welcome to DaatFI! I can pay your installments, check your balance, and more. How can I help?"
     ];
     return { text: greetings[Math.floor(Math.random() * greetings.length)], type: 'bot' };
   }
@@ -546,7 +546,7 @@ class ArcFiAgent {
 // ─── Chatbot UI ───────────────────────────────────────────────────────────────
 class ChatbotUI {
   constructor() {
-    this.agent = new ArcFiAgent();
+    this.agent = new DaatFIAgent();
     this.isOpen = false;
     this.initialized = false;
   }
@@ -555,7 +555,7 @@ class ChatbotUI {
     if (this.initialized) return;
     this.initialized = true;
     this._bindEvents();
-    this._addMessage('bot', "👋 Hi! I'm **ArcFi AI**. I can help you manage loans and payments on Arc Testnet.\n\nType **help** to see what I can do!");
+    this._addMessage('bot', "👋 Hi! I'm **DaatFI AI**. I can help you manage loans and payments on Arc Testnet.\n\nType **help** to see what I can do!");
   }
 
   _bindEvents() {
