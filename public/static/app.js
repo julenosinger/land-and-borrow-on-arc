@@ -995,9 +995,9 @@ async function viewLoanDetails(loanId) {
         ? [{ label: '<i class="fa-solid fa-folder-open"></i> Borrower Documents', primary: false,
              onClick: (c) => { c(); if (window.DOCS) window.DOCS.open(loanId, col); } }]
         : []),
-      ...(['Active','Repaid'].includes(loan.statusLabel) && window.RCPT?.getForLoan(loanId, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED')
+      ...(['Active','Repaid'].includes(loan.statusLabel) && window.RCPT
         ? [{ label: '<i class="fa-solid fa-file-pdf"></i> View Receipt', primary: false,
-             onClick: (c) => { viewLoanReceipt(loanId, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED'); } }]
+             onClick: (c) => { c(); viewLoanReceipt(loanId, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED'); } }]
         : [])
     ]
   });
@@ -1677,23 +1677,38 @@ function _showReceiptBanner(loanId, receiptId, type) {
  * Open the receipt viewer for a given loan (called from dashboard/detail buttons).
  * type: 'LOAN_FUNDED' | 'LOAN_REPAID'
  */
-function viewLoanReceipt(loanId, type) {
+async function viewLoanReceipt(loanId, type) {
   if (!window.RCPT) { showToast('Receipt system not loaded.', 'warning'); return; }
+
+  // If already stored, open immediately
   const existing = window.RCPT.getForLoan(loanId, type);
-  if (existing) {
-    window.RCPT.view(existing.receiptId);
-  } else {
-    showToast('No receipt available yet for this loan.', 'info', 4000);
+  if (existing) { window.RCPT.view(existing.receiptId); return; }
+
+  // Not stored yet — generate on demand from chain data
+  const t = showToast('Generating receipt…', 'info', 0);
+  try {
+    const loanFull = await window.web3.getLoanFull(loanId);
+    if (!loanFull) throw new Error('Loan data not found');
+    const wallet = window.web3?.address || '';
+    // Determine tx hash field based on type
+    const txHashes = type === 'LOAN_REPAID'
+      ? { repay: '' }
+      : { fund:  '' };
+    await window.RCPT.generate(loanFull, type, txHashes, { wallet });
+    t?.remove?.();
+  } catch (err) {
+    t?.remove?.();
+    showToast('Could not generate receipt: ' + (err.message || err), 'error', 6000);
   }
 }
 
 /**
- * Returns HTML for a "View Receipt" button if a receipt exists for this loan.
- * Safe for innerHTML injection (no user data in output).
+ * Returns HTML for a "View Receipt" button for any Active or Repaid loan.
+ * Clicking generates the receipt on demand if not already in localStorage.
  */
 function _rcptBtnHtml(loanId, type) {
-  if (!window.RCPT || !window.RCPT.getForLoan(loanId, type)) return '';
-  return `<button class="btn btn-secondary btn-sm" style="margin-left:4px;" onclick="viewLoanReceipt('${loanId}','${type}')" title="View PDF Receipt">
+  if (!window.RCPT) return '';
+  return `<button class="btn btn-secondary btn-sm" style="margin-left:4px;" onclick="viewLoanReceipt('${loanId}','${type}')" title="View / Download PDF Receipt">
     <i class="fa-solid fa-file-pdf"></i>
   </button>`;
 }
