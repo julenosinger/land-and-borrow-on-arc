@@ -869,7 +869,11 @@ async function viewLoanDetails(loanId) {
       </div>
     `,
     actions: [
-      { label: 'Close', onClick: (c) => c() }
+      { label: 'Close', onClick: (c) => c() },
+      ...(['Active','Repaid'].includes(loan.statusLabel) && window.RCPT?.getForLoan(loanId, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED')
+        ? [{ label: '<i class="fa-solid fa-file-pdf"></i> View Receipt', primary: false,
+             onClick: (c) => { viewLoanReceipt(loanId, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED'); } }]
+        : [])
     ]
   });
 }
@@ -948,6 +952,8 @@ async function loadDashboard() {
               </button>` : ''}
             ${loan.statusLabel === 'Requested' ? `
               <button class="btn btn-danger btn-sm" onclick="cancelLoan(${loan.id})">Cancel</button>` : ''}
+            ${(loan.statusLabel === 'Active' || loan.statusLabel === 'Repaid') ? `
+              ${_rcptBtnHtml(loan.id, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED')}` : ''}
           </div>
         </td>
       </tr>
@@ -1119,6 +1125,26 @@ async function payFullLoan() {
 
     showToast(`Loan #${loanId} fully repaid! 🎉`, 'success');
     if (lastTx) showReceiptModal({ loanId, amount: remaining, txHash: lastTx.txHash, type: 'Full Loan Repayment' });
+
+    // ── Generate PDF receipt for full repayment (background) ──────────────────
+    if (window.RCPT) {
+      try {
+        const loanFull = await window.web3.getLoanFull(loanId);
+        const repayTx = lastTx?.txHash || '';
+        const receiptId = await window.RCPT.generate(
+          loanFull,
+          'LOAN_REPAID',
+          { repay: repayTx },
+          { wallet: window.web3?.address }
+        );
+        showToast(`📄 Repayment receipt ready — Loan #${loanId}`, 'info', 5000);
+        // Show View Receipt button in a follow-up toast-style banner
+        _showReceiptBanner(loanId, receiptId, 'LOAN_REPAID');
+      } catch (rErr) {
+        console.warn('[DaatFI Receipt] Receipt generation error:', rErr);
+      }
+    }
+
     loadLoanInstallments(loanId);
     loadDashboard();
   } catch (err) {
@@ -1482,4 +1508,58 @@ async function circleRequestFaucet() {
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-droplet"></i> Request Testnet USDC'; }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PDF Receipt Integration Helpers (additive only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Show a non-blocking "View Receipt" banner after a receipt is generated.
+ */
+function _showReceiptBanner(loanId, receiptId, type) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const banner = document.createElement('div');
+  banner.className = 'toast toast-info';
+  banner.style.cssText = 'display:flex; align-items:center; gap:12px; padding:12px 16px; min-width:300px;';
+  banner.innerHTML = `
+    <i class="fa-solid fa-file-pdf" style="color:#38bdf8; font-size:18px;"></i>
+    <div style="flex:1;">
+      <div style="font-weight:700; font-size:13px;">Receipt Ready — Loan #${loanId}</div>
+      <div style="font-size:11px; color:var(--text-muted);">${type === 'LOAN_FUNDED' ? 'Loan Funded' : 'Loan Repaid'} · PDF available</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="window.RCPT&&window.RCPT.view('${receiptId}'); this.closest('.toast')?.remove();">
+      <i class="fa-solid fa-eye"></i> View
+    </button>
+    <button style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;" onclick="this.closest('.toast')?.remove();">&times;</button>
+  `;
+  container.appendChild(banner);
+  // Auto-remove after 15 seconds
+  setTimeout(function () { banner.remove(); }, 15000);
+}
+
+/**
+ * Open the receipt viewer for a given loan (called from dashboard/detail buttons).
+ * type: 'LOAN_FUNDED' | 'LOAN_REPAID'
+ */
+function viewLoanReceipt(loanId, type) {
+  if (!window.RCPT) { showToast('Receipt system not loaded.', 'warning'); return; }
+  const existing = window.RCPT.getForLoan(loanId, type);
+  if (existing) {
+    window.RCPT.view(existing.receiptId);
+  } else {
+    showToast('No receipt available yet for this loan.', 'info', 4000);
+  }
+}
+
+/**
+ * Returns HTML for a "View Receipt" button if a receipt exists for this loan.
+ * Safe for innerHTML injection (no user data in output).
+ */
+function _rcptBtnHtml(loanId, type) {
+  if (!window.RCPT || !window.RCPT.getForLoan(loanId, type)) return '';
+  return `<button class="btn btn-secondary btn-sm" style="margin-left:4px;" onclick="viewLoanReceipt('${loanId}','${type}')" title="View PDF Receipt">
+    <i class="fa-solid fa-file-pdf"></i>
+  </button>`;
 }

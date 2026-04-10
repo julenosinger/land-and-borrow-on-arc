@@ -578,14 +578,33 @@ async function mpExecuteFund(loanId, interestRate, principalAmount) {
 
     // ── Step 2: fundLoan (approve USDC + transfer) ────────────────────────────
     const toast2 = showToast(`Step 2/2 — Funding loan #${loanId} ($${mpFmt(principalAmount)} USDC)…`, 'info', 0);
-    await window.web3.fundLoan(loanId, principalAmount);
+    const fundResult = await window.web3.fundLoan(loanId, principalAmount);
     toast2?.remove?.();
 
     // ── Success ───────────────────────────────────────────────────────────────
     showToast(`🎉 Loan #${loanId} funded! USDC sent to borrower.`, 'success', 8000);
 
-    // Show success modal
-    _mpShowFundSuccessModal(loanId, interestRate, principalAmount);
+    // ── Generate PDF receipt (background, non-blocking) ───────────────────────
+    if (window.RCPT) {
+      try {
+        const loanFull = await window.web3.getLoanFull(loanId);
+        const fundTxHash = fundResult?.receipt?.transactionHash || fundResult?.tx?.hash || '';
+        const receiptId = await window.RCPT.generate(
+          loanFull,
+          'LOAN_FUNDED',
+          { fund: fundTxHash },
+          { wallet: window.web3?.address }
+        );
+        showToast(`📄 Receipt ready — Loan #${loanId}`, 'info', 4000);
+        // Update the success modal to include View Receipt button
+        _mpShowFundSuccessModal(loanId, interestRate, principalAmount, receiptId);
+      } catch (rErr) {
+        console.warn('[DaatFI Receipt] Receipt generation error:', rErr);
+        _mpShowFundSuccessModal(loanId, interestRate, principalAmount, null);
+      }
+    } else {
+      _mpShowFundSuccessModal(loanId, interestRate, principalAmount, null);
+    }
 
     // Invalidate cache and refresh
     MP.lastFetch = 0;
@@ -598,7 +617,12 @@ async function mpExecuteFund(loanId, interestRate, principalAmount) {
   }
 }
 
-function _mpShowFundSuccessModal(loanId, rate, amount) {
+function _mpShowFundSuccessModal(loanId, rate, amount, receiptId) {
+  const rcptBtn = receiptId
+    ? `<button class="btn btn-secondary btn-sm" style="margin-top:12px; width:100%;" onclick="window.RCPT&&window.RCPT.view('${receiptId}')">
+         <i class="fa-solid fa-file-pdf"></i> View Loan Receipt
+       </button>`
+    : '';
   showModal({
     title: '🎉 Loan Funded!',
     size: 'modal-sm',
@@ -614,7 +638,8 @@ function _mpShowFundSuccessModal(loanId, rate, amount) {
           <div class="detail-row"><span class="detail-label">Amount Sent</span><span class="detail-value mono">$${mpFmt(amount)} USDC</span></div>
           <div class="detail-row" style="border:none;"><span class="detail-label">Your Rate</span><span class="detail-value text-green font-bold">${rate}%/month</span></div>
         </div>
-        <div style="font-size:12px; color:var(--text-muted);">
+        ${rcptBtn}
+        <div style="font-size:12px; color:var(--text-muted); margin-top:12px;">
           Track repayments in your <strong>Dashboard</strong> → Lend tab.
         </div>
       </div>
@@ -915,9 +940,12 @@ async function loadMyLending() {
               <td>${collateralBadge(loan.collateral?.colTypeLabel)}</td>
               <td>${statusBadge(loan.statusLabel)}</td>
               <td>
-                <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})">
-                  <i class="fa-solid fa-eye"></i>
-                </button>
+                <div class="flex" style="gap:6px; flex-wrap:wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})">
+                    <i class="fa-solid fa-eye"></i>
+                  </button>
+                  ${typeof _rcptBtnHtml === 'function' ? _rcptBtnHtml(loan.id, 'LOAN_FUNDED') : ''}
+                </div>
               </td>
             </tr>`;
         }).join('');
@@ -948,9 +976,14 @@ async function loadMyLending() {
             <td>${loan.totalInstallments}</td>
             <td>${statusBadge(loan.statusLabel)}</td>
             <td>
-              <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})">
-                <i class="fa-solid fa-eye"></i>
-              </button>
+              <div class="flex" style="gap:6px; flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="viewLoanDetails(${loan.id})">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+                ${typeof _rcptBtnHtml === 'function'
+                  ? _rcptBtnHtml(loan.id, loan.statusLabel === 'Repaid' ? 'LOAN_REPAID' : 'LOAN_FUNDED')
+                  : ''}
+              </div>
             </td>
           </tr>`).join('');
       }
