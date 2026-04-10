@@ -369,16 +369,18 @@ async function handleDocUpload(input) {
     document.getElementById('rwa-doc-err').classList.remove('show');
     showToast('Document hash computed ✓', 'success', 3000);
 
-    // Try IPFS upload if keys available
-    if (window.PINATA_API_KEY) {
-      showToast('Uploading to IPFS…', 'info', 0);
-      try {
-        const result = await window.web3.uploadToIPFS(file);
-        uploadedDocHash = result.hash.startsWith('0x') ? result.hash : `0x${result.hash}`;
-        uploadedDocURI  = result.uri;
+    // Always try IPFS upload via backend proxy (PINATA_JWT stored as Cloudflare secret)
+    showToast('Uploading to IPFS…', 'info', 0);
+    try {
+      const result = await window.web3.uploadToIPFS(file);
+      uploadedDocHash = result.hash.startsWith('0x') ? result.hash : `0x${result.hash}`;
+      uploadedDocURI  = result.uri;
+      if (result.localOnly) {
+        showToast('IPFS upload unavailable — local hash saved', 'warning');
+      } else {
         showToast('Document uploaded to IPFS ✓', 'success');
-      } catch { showToast('IPFS upload failed — local hash used', 'warning'); }
-    }
+      }
+    } catch { showToast('IPFS upload failed — local hash used', 'warning'); }
   } catch (err) {
     showToast('Failed to process document: ' + err.message, 'error');
   }

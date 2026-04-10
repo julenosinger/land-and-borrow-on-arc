@@ -4,6 +4,7 @@ import { serveStatic } from 'hono/cloudflare-workers'
 
 type Bindings = {
   CIRCLE_API_KEY: string
+  PINATA_JWT: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -15,6 +16,7 @@ const app = new Hono<{ Bindings: Bindings }>()
 // ── 1. Rate Limiting (in-memory, per IP, Cloudflare Workers compatible) ──────
 const _rl: Map<string, { count: number; reset: number }> = new Map()
 const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
+  '/api/ipfs/upload':     { max: 10,  windowMs: 60_000},    // 10/min — IPFS upload
   '/api/circle/faucet':   { max: 3,   windowMs: 60_000 },   // 3/min — faucet abuse
   '/api/receipts':        { max: 20,  windowMs: 60_000 },   // 20/min
   '/api/loans/meta':      { max: 30,  windowMs: 60_000 },
@@ -69,7 +71,7 @@ app.use('*', async (c, next) => {
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://fonts.googleapis.com",
     "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com",
     "img-src 'self' data: https:",
-    "connect-src 'self' https://rpc.testnet.arc.network https://api.circle.com wss: ws:",
+    "connect-src 'self' https://rpc.testnet.arc.network https://api.circle.com https://gateway.pinata.cloud wss: ws:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -2061,6 +2063,34 @@ app.get('/api/circle/wallets', async (c) => {
       createDate: w.createDate
     }))
     return c.json({ wallets, count: wallets.length })
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500)
+  }
+})
+
+// ── IPFS Upload proxy (keeps PINATA_JWT secret-side only) ───────────────────
+app.post('/api/ipfs/upload', async (c) => {
+  const jwt = c.env?.PINATA_JWT
+  if (!jwt) return c.json({ error: 'IPFS upload not configured' }, 503)
+
+  try {
+    // Forward the multipart form data as-is to Pinata
+    const body = await c.req.raw.formData()
+    const resp = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jwt}` },
+      body,
+    })
+    if (!resp.ok) {
+      const txt = await resp.text()
+      return c.json({ error: `Pinata error ${resp.status}: ${txt}` }, 502)
+    }
+    const data: any = await resp.json()
+    return c.json({
+      IpfsHash: data.IpfsHash,
+      uri:  `ipfs://${data.IpfsHash}`,
+      url:  `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`,
+    })
   } catch (e: any) {
     return c.json({ error: e.message }, 500)
   }

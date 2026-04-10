@@ -721,20 +721,18 @@ class Web3Manager {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const resp = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      // Route through the backend proxy — PINATA_JWT never exposed to browser
+      const resp = await fetch('/api/ipfs/upload', {
         method: 'POST',
-        headers: {
-          'pinata_api_key':        window.PINATA_API_KEY    || '',
-          'pinata_secret_api_key': window.PINATA_SECRET_KEY || ''
-        },
         body: formData
       });
-      if (!resp.ok) throw new Error(`Pinata error: ${resp.status}`);
+      if (!resp.ok) throw new Error(`Upload error: ${resp.status}`);
       const data = await resp.json();
+      if (data.error) throw new Error(data.error);
       return {
         hash: '0x' + data.IpfsHash,
-        uri:  `ipfs://${data.IpfsHash}`,
-        url:  `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`
+        uri:  data.uri  || `ipfs://${data.IpfsHash}`,
+        url:  data.url  || `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`
       };
     } catch {
       // Fallback: hash the file locally (no IPFS upload)
