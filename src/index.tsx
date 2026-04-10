@@ -1299,73 +1299,87 @@ app.get('/', (c) => {
 <!-- ════ FOOTER ════ -->
 <footer class="site-footer">
   <div class="footer-divider"></div>
+
+  <!-- ── Top section: 3 equal columns ── -->
   <div class="footer-inner">
 
-    <!-- Col 1: Arc Network -->
-    <div class="footer-col">
+    <!-- Col 1: Brand + Network -->
+    <div class="footer-col footer-col-brand">
       <div class="footer-logo">
         <span class="footer-logo-icon">⚡</span>
         <span class="footer-logo-text">Arc<span class="footer-logo-fi">Fi</span></span>
       </div>
-      <p class="footer-tagline">Global decentralized lending on Arc Testnet. Hybrid RWA + crypto collateral.</p>
+      <p class="footer-tagline">Global decentralized lending on Arc Testnet. Hybrid RWA + crypto collateral, USDC payments, AI-powered agent.</p>
       <div class="footer-network-badge">
-        <span class="footer-net-dot" id="footer-net-dot"></span>
-        <span class="footer-net-label">Arc Testnet &nbsp;·&nbsp; Chain ID: 5042002</span>
+        <span class="footer-net-dot"></span>
+        <span class="footer-net-label">Arc Testnet</span>
+        <span class="footer-net-sep">·</span>
+        <span class="footer-net-chain">Chain ID: 5042002</span>
       </div>
       <div class="footer-wallet-row" id="footer-wallet-row" style="display:none;">
-        <i class="fa-solid fa-wallet" style="font-size:11px;color:var(--text-muted);"></i>
-        <span class="footer-wallet-addr" id="footer-wallet-addr"></span>
+        <i class="fa-solid fa-wallet"></i>
+        <span id="footer-wallet-addr"></span>
       </div>
     </div>
 
     <!-- Col 2: Resources -->
     <div class="footer-col">
-      <div class="footer-col-title">Resources</div>
+      <p class="footer-col-title">Resources</p>
       <ul class="footer-links">
         <li><a href="https://docs.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
-          <i class="fa-solid fa-book"></i> Documentation
+          <i class="fa-solid fa-book"></i>Documentation
         </a></li>
         <li><a href="https://explorer.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
-          <i class="fa-solid fa-magnifying-glass"></i> Smart Contracts
+          <i class="fa-solid fa-cube"></i>Smart Contracts
         </a></li>
         <li><a href="https://github.com/julenosinger/land-and-borrow-on-arc" target="_blank" rel="noopener noreferrer" class="footer-link">
-          <i class="fa-brands fa-github"></i> GitHub Repository
+          <i class="fa-brands fa-github"></i>GitHub Repository
         </a></li>
         <li><a href="https://explorer.arc.fun" target="_blank" rel="noopener noreferrer" class="footer-link">
-          <i class="fa-solid fa-circle-question"></i> Support / Help Center
+          <i class="fa-solid fa-headset"></i>Support / Help Center
         </a></li>
       </ul>
     </div>
 
-    <!-- Col 3: Legal -->
-    <div class="footer-col">
-      <div class="footer-col-title">Legal</div>
-      <ul class="footer-links">
-        <li><a href="#" onclick="return false;" class="footer-link">
-          <i class="fa-solid fa-file-lines"></i> Terms of Service
-        </a></li>
-        <li><a href="#" onclick="return false;" class="footer-link">
-          <i class="fa-solid fa-shield-halved"></i> Privacy Policy
-        </a></li>
-        <li><a href="#" onclick="return false;" class="footer-link">
-          <i class="fa-solid fa-triangle-exclamation"></i> Disclaimer
-        </a></li>
-      </ul>
-      <div class="footer-disclaimer">
-        This platform operates on a testnet environment. All transactions are for testing purposes only.
-        No real‑world financial guarantees are provided. Users are fully responsible for their actions.
-        Non‑custodial: lenders assume full risk. RWA enforcement is off‑chain; crypto collateral is enforced on‑chain.
+    <!-- Col 3: Legal — links + disclaimer side-by-side -->
+    <div class="footer-col footer-col-legal">
+      <p class="footer-col-title">Legal</p>
+      <div class="footer-legal-body">
+        <!-- Legal links (left side) -->
+        <ul class="footer-links footer-legal-links">
+          <li><a href="#" onclick="return false;" class="footer-link">
+            <i class="fa-solid fa-file-lines"></i>Terms of Service
+          </a></li>
+          <li><a href="#" onclick="return false;" class="footer-link">
+            <i class="fa-solid fa-shield-halved"></i>Privacy Policy
+          </a></li>
+          <li><a href="#" onclick="return false;" class="footer-link">
+            <i class="fa-solid fa-triangle-exclamation"></i>Disclaimer
+          </a></li>
+        </ul>
+        <!-- Disclaimer text (right side, inline) -->
+        <div class="footer-disclaimer">
+          <i class="fa-solid fa-circle-info footer-disclaimer-icon"></i>
+          <p>This platform operates on a testnet environment. All transactions are for testing purposes only. No real‑world financial guarantees are provided. Users are fully responsible for their actions. Non‑custodial: lenders assume full risk. RWA enforcement is off‑chain; crypto collateral is enforced on‑chain.</p>
+        </div>
       </div>
     </div>
 
   </div>
 
-  <div class="footer-bottom">
-    <span>© 2025 ArcFi — Decentralized Lending Protocol on Arc Testnet</span>
-    <span class="footer-bottom-sep">·</span>
-    <span>Built with Hono + Cloudflare Pages</span>
-    <span class="footer-bottom-sep">·</span>
-    <a href="https://arc.fun" target="_blank" rel="noopener noreferrer" class="footer-bottom-link">arc.fun ↗</a>
+  <!-- ── Bottom bar ── -->
+  <div class="footer-bottom-bar">
+    <div class="footer-bottom-inner">
+      <span>© 2025 ArcFi — Decentralized Lending Protocol</span>
+      <div class="footer-bottom-dots">
+        <span class="footer-bottom-sep">·</span>
+        <span>Arc Testnet · Chain ID 5042002</span>
+        <span class="footer-bottom-sep">·</span>
+        <span>Hono + Cloudflare Pages</span>
+        <span class="footer-bottom-sep">·</span>
+        <a href="https://arc.fun" target="_blank" rel="noopener noreferrer" class="footer-bottom-link">arc.fun ↗</a>
+      </div>
+    </div>
   </div>
 </footer>
 
