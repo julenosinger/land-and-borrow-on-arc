@@ -483,356 +483,591 @@ app.get('/', (c) => {
 
   <!-- ══ PAGE: BORROW ══════════════════════════════════════════════════════════ -->
   <div class="page" id="page-borrow">
-    <div class="section-title"><i class="fa-solid fa-hand-holding-dollar text-cyan" style="margin-right:8px;"></i>Apply for a Loan</div>
-    <div class="section-sub">Complete the form below to submit your loan request on Arc Testnet.</div>
 
-    <!-- Wizard Steps -->
-    <div class="steps-bar" id="borrow-steps">
-      <div class="step-node active" id="step-1">
-        <div class="step-circle">1</div>
-        <div class="step-label">Personal Info</div>
-      </div>
-      <div class="step-node" id="step-2">
-        <div class="step-circle">2</div>
-        <div class="step-label">Loan Details</div>
-      </div>
-      <div class="step-node" id="step-3">
-        <div class="step-circle">3</div>
-        <div class="step-label">Collateral</div>
-      </div>
-      <div class="step-node" id="step-4">
-        <div class="step-circle">4</div>
-        <div class="step-label">Review &amp; Submit</div>
-      </div>
+    <!-- Offer pre-fill banner (shown when applying from marketplace) -->
+    <div id="borrow-offer-banner" class="borrow-offer-banner" style="display:none;">
+      <i class="fa-solid fa-store"></i>
+      <span id="borrow-offer-banner-text">Applying from a marketplace offer — terms pre-filled.</span>
+      <button onclick="document.getElementById('borrow-offer-banner').style.display='none'" class="borrow-offer-banner-close">&times;</button>
     </div>
 
-    <!-- Step 1: Personal Info -->
-    <div id="borrow-step-1" class="card card-lg">
-      <div class="card-header">
-        <div class="card-title"><i class="fa-solid fa-user text-cyan"></i>Personal Information</div>
-        <span class="badge badge-active">Step 1 of 4</span>
-      </div>
-      <div class="form-section">
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label">Full Name <span class="req">*</span></label>
-            <input id="b-fullname" class="form-control" type="text" placeholder="e.g. John Michael Smith" />
-            <span class="field-error" id="b-fullname-err"></span>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email Address <span class="req">*</span></label>
-            <input id="b-email" class="form-control" type="email" placeholder="john@example.com" />
-            <span class="field-error" id="b-email-err"></span>
-          </div>
-        </div>
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label">Country <span class="req">*</span></label>
-            <select id="b-country" class="form-control">
-              <option value="">— Select country —</option>
-              <option>United States</option><option>United Kingdom</option><option>Germany</option>
-              <option>France</option><option>Japan</option><option>Brazil</option>
-              <option>Canada</option><option>Australia</option><option>India</option>
-              <option>China</option><option>Singapore</option><option>UAE</option>
-              <option>Mexico</option><option>Argentina</option><option>Netherlands</option>
-              <option>Spain</option><option>Italy</option><option>Portugal</option>
-              <option>Switzerland</option><option>Sweden</option><option>Norway</option>
-              <option>South Korea</option><option>Indonesia</option><option>Nigeria</option>
-              <option>South Africa</option><option>Turkey</option><option>Other</option>
-            </select>
-            <span class="field-error" id="b-country-err"></span>
-          </div>
-          <div class="form-group">
-            <label class="form-label">City <span class="req">*</span></label>
-            <input id="b-city" class="form-control" type="text" placeholder="e.g. New York" />
-            <span class="field-error" id="b-city-err"></span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Employment Status <span class="opt">(optional)</span></label>
-          <select id="b-employment" class="form-control">
-            <option value="">— Select status —</option>
-            <option>Employed (Full-time)</option>
-            <option>Employed (Part-time)</option>
-            <option>Self-employed / Freelancer</option>
-            <option>Business Owner</option>
-            <option>Student</option>
-            <option>Retired</option>
-            <option>Unemployed</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Borrower Type <span class="req">*</span></label>
-          <div class="token-chips">
-            <button class="token-chip selected" data-borrower-type="individual" onclick="selectBorrowerType(this,'individual')">👤 Individual</button>
-            <button class="token-chip" data-borrower-type="company" onclick="selectBorrowerType(this,'company')">🏢 Company</button>
-          </div>
-        </div>
-      </div>
-      <div class="flex" style="justify-content:flex-end; margin-top:24px;">
-        <button class="btn btn-primary" onclick="borrowStep(2)">
-          Next: Loan Details <i class="fa-solid fa-arrow-right"></i>
-        </button>
-      </div>
-    </div>
+    <!-- ── BORROW WIZARD WRAPPER ── -->
+    <div class="borrow-wizard">
 
-    <!-- Step 2: Loan Details -->
-    <div id="borrow-step-2" class="card card-lg" style="display:none;">
-      <div class="card-header">
-        <div class="card-title"><i class="fa-solid fa-file-invoice-dollar text-cyan"></i>Loan Details</div>
-        <span class="badge badge-active">Step 2 of 4</span>
-      </div>
-      <div class="form-section">
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label">Loan Amount <span class="req">*</span></label>
-            <div class="input-group">
-              <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <input id="b-amount" class="form-control" type="number" min="1" step="0.01" placeholder="e.g. 5000" />
-              <span class="input-suffix">USDC</span>
+      <!-- ── WIZARD HEADER ── -->
+      <div class="bw-header">
+        <div class="bw-title-row">
+          <div class="bw-icon-wrap"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+          <div>
+            <h1 class="bw-title">Apply for a Loan</h1>
+            <p class="bw-subtitle">Complete each step to submit your request on Arc Testnet — USDC, non-custodial, transparent.</p>
+          </div>
+        </div>
+
+        <!-- ── STEPPER ── -->
+        <div class="bw-stepper" id="borrow-steps">
+          <div class="bw-step active" id="step-1">
+            <div class="bw-step-bubble">
+              <span class="bw-step-num">1</span>
+              <svg class="bw-step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
-            <span class="field-error" id="b-amount-err"></span>
+            <span class="bw-step-label">Personal Info</span>
           </div>
-          <div class="form-group">
-            <label class="form-label">Number of Installments <span class="req">*</span></label>
-            <select id="b-installments" class="form-control" onchange="updateLoanPreview()">
-              <option value="">— Select —</option>
-              <option value="1">1 installment (lump sum)</option>
-              <option value="2">2 installments</option>
-              <option value="3">3 installments</option>
-              <option value="4">4 installments</option>
-              <option value="5">5 installments</option>
-              <option value="6">6 installments</option>
-              <option value="7">7 installments</option>
-              <option value="8">8 installments</option>
-              <option value="9">9 installments</option>
-              <option value="10">10 installments</option>
-            </select>
-            <span class="field-hint">Maximum 10 installments</span>
-            <span class="field-error" id="b-installments-err"></span>
-          </div>
-        </div>
-
-        <!-- Loan preview -->
-        <div id="loan-preview" class="card" style="background:var(--bg-input); display:none; border-color:rgba(6,182,212,0.2);">
-          <div class="card-title" style="font-size:13px; margin-bottom:12px; color:var(--cyan);">
-            <i class="fa-solid fa-calculator"></i> Loan Preview (estimated based on 5% max rate)
-          </div>
-          <div class="col-3" style="gap:12px;">
-            <div>
-              <div class="stat-label" style="font-size:10px;">Principal</div>
-              <div style="font-size:16px; font-weight:700; color:var(--text-primary); font-family:'JetBrains Mono',monospace;" id="prev-principal">—</div>
+          <div class="bw-step-line" id="step-line-1"></div>
+          <div class="bw-step" id="step-2">
+            <div class="bw-step-bubble">
+              <span class="bw-step-num">2</span>
+              <svg class="bw-step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
-            <div>
-              <div class="stat-label" style="font-size:10px;">Est. Total</div>
-              <div style="font-size:16px; font-weight:700; color:var(--cyan); font-family:'JetBrains Mono',monospace;" id="prev-total">—</div>
+            <span class="bw-step-label">Loan Details</span>
+          </div>
+          <div class="bw-step-line" id="step-line-2"></div>
+          <div class="bw-step" id="step-3">
+            <div class="bw-step-bubble">
+              <span class="bw-step-num">3</span>
+              <svg class="bw-step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
-            <div>
-              <div class="stat-label" style="font-size:10px;">Per Installment</div>
-              <div style="font-size:16px; font-weight:700; color:var(--green); font-family:'JetBrains Mono',monospace;" id="prev-inst">—</div>
+            <span class="bw-step-label">Collateral</span>
+          </div>
+          <div class="bw-step-line" id="step-line-3"></div>
+          <div class="bw-step" id="step-4">
+            <div class="bw-step-bubble">
+              <span class="bw-step-num">4</span>
+              <svg class="bw-step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
-          </div>
-          <div class="legal-banner legal-banner-info" style="margin-top:12px; font-size:11px;">
-            <i class="fa-solid fa-info-circle"></i>
-            Final interest rate is set by the lender (≤ 5%/month). This preview uses the maximum rate.
+            <span class="bw-step-label">Review</span>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Loan Purpose <span class="opt">(optional)</span></label>
-          <textarea id="b-purpose" class="form-control" rows="2" placeholder="Brief description of how you intend to use the loan..."></textarea>
-        </div>
-      </div>
-      <div class="flex" style="justify-content:space-between; margin-top:24px; gap:12px;">
-        <button class="btn btn-secondary" onclick="borrowStep(1)"><i class="fa-solid fa-arrow-left"></i> Back</button>
-        <button class="btn btn-primary" onclick="borrowStep(3)">Next: Collateral <i class="fa-solid fa-arrow-right"></i></button>
-      </div>
-    </div>
-
-    <!-- Step 3: Collateral -->
-    <div id="borrow-step-3" class="card card-lg" style="display:none;">
-      <div class="card-header">
-        <div class="card-title"><i class="fa-solid fa-shield-halved text-cyan"></i>Collateral</div>
-        <span class="badge badge-active">Step 3 of 4</span>
-      </div>
-
-      <!-- Collateral Type Selector -->
-      <div class="grid-2" style="margin-bottom:24px;">
-        <div class="collateral-option selected" id="col-rwa-card" onclick="selectCollateralType('rwa')">
-          <div class="check-mark">
-            <svg width="12" height="12" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-          </div>
-          <div class="collateral-icon" style="background:rgba(245,158,11,0.1);">🏠</div>
-          <div style="font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:6px;">Real-World Asset (RWA)</div>
-          <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">Car, house, jewelry, land, or custom asset. Notarized document uploaded to IPFS. Hash stored on-chain.</div>
-          <div class="badge badge-rwa" style="margin-top:12px;">⚖️ Off-chain enforcement</div>
-        </div>
-        <div class="collateral-option" id="col-crypto-card" onclick="selectCollateralType('crypto')">
-          <div class="check-mark">
-            <svg width="12" height="12" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-          </div>
-          <div class="collateral-icon" style="background:rgba(6,182,212,0.1);">🔐</div>
-          <div style="font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:6px;">Crypto Asset</div>
-          <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">USDC, ERC-20 tokens or ETH-wrapped. Locked in smart contract escrow. Released on full repayment.</div>
-          <div class="badge badge-crypto" style="margin-top:12px;">⚡ On-chain enforcement</div>
+        <!-- ── PROGRESS BAR ── -->
+        <div class="bw-progress-track">
+          <div class="bw-progress-fill" id="bw-progress-fill" style="width:0%"></div>
+          <span class="bw-progress-label" id="bw-progress-label">Step 1 of 4</span>
         </div>
       </div>
 
-      <!-- RWA Form -->
-      <div id="col-rwa-form" class="form-section">
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label">Asset Type <span class="req">*</span></label>
-            <select id="rwa-asset-type" class="form-control" onchange="handleRwaCustom(this)">
-              <option value="">— Select asset —</option>
-              <option value="Car">🚗 Car</option>
-              <option value="Motorcycle">🏍️ Motorcycle</option>
-              <option value="House">🏠 House / Apartment</option>
-              <option value="Land">🌍 Land / Real Estate</option>
-              <option value="Jewelry">💍 Jewelry</option>
-              <option value="Art">🎨 Artwork / Collectible</option>
-              <option value="Equipment">🔧 Equipment / Machinery</option>
-              <option value="Vehicle">🚛 Commercial Vehicle</option>
-              <option value="custom">✏️ Custom (specify below)</option>
-            </select>
-            <span class="field-error" id="rwa-asset-type-err"></span>
-          </div>
-          <div class="form-group" id="rwa-custom-group" style="display:none;">
-            <label class="form-label">Custom Asset Type <span class="req">*</span></label>
-            <input id="rwa-asset-custom" class="form-control" type="text" placeholder="e.g. Vintage watch collection" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Asset Description <span class="req">*</span></label>
-          <textarea id="rwa-description" class="form-control" rows="3" placeholder="Detailed description: make, model, year, condition, serial number, etc."></textarea>
-          <span class="field-error" id="rwa-description-err"></span>
-        </div>
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label">Estimated Value (USD) <span class="req">*</span></label>
-            <div class="input-group">
-              <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <input id="rwa-value" class="form-control" type="number" min="1" placeholder="e.g. 15000" />
-              <span class="input-suffix">USD</span>
-            </div>
-            <span class="field-error" id="rwa-value-err"></span>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Country / Jurisdiction <span class="req">*</span></label>
-            <input id="rwa-jurisdiction" class="form-control" type="text" placeholder="e.g. United States — California" />
-            <span class="field-error" id="rwa-jurisdiction-err"></span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Notarized Ownership Document <span class="req">*</span></label>
-          <div class="upload-zone" id="rwa-upload-zone">
-            <input type="file" id="rwa-doc-file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleDocUpload(this)" />
-            <div class="upload-icon">📄</div>
-            <div class="upload-text">Drop file here or click to browse</div>
-            <div class="upload-sub">PDF, JPG, PNG — Max 10MB — Notarized documents required</div>
-          </div>
-          <div id="rwa-doc-info" style="display:none; margin-top:10px;" class="card card-sm">
-            <div class="flex items-center gap-3">
-              <span style="font-size:24px;">📎</span>
-              <div style="flex:1;">
-                <div id="rwa-doc-name" style="font-size:13px; font-weight:600; color:var(--text-primary);"></div>
-                <div id="rwa-doc-hash" class="mono text-muted" style="font-size:10px; margin-top:3px; word-break:break-all;"></div>
+      <!-- ════════════════════════════════════════════════════════
+           STEP 1 — PERSONAL INFORMATION
+           ════════════════════════════════════════════════════════ -->
+      <div id="borrow-step-1" class="bw-step-content bw-animate-in">
+
+        <!-- Card: Identity -->
+        <div class="bw-card">
+          <div class="bw-card-eyebrow"><i class="fa-solid fa-id-card"></i> Identity</div>
+          <div class="bw-form-grid">
+            <div class="bw-field">
+              <label class="bw-label" for="b-fullname">Full name <span class="bw-req">*</span></label>
+              <div class="bw-input-wrap">
+                <input id="b-fullname" class="bw-input" type="text" placeholder="e.g. John Michael Smith"
+                  onblur="bwValidateField('b-fullname')" oninput="bwClearField('b-fullname')" />
+                <i class="fa-solid fa-check bw-input-check" id="b-fullname-check"></i>
               </div>
-              <span class="badge badge-active">Hash Computed ✓</span>
+              <span class="bw-field-err" id="b-fullname-err"></span>
+            </div>
+            <div class="bw-field">
+              <label class="bw-label" for="b-email">Email address <span class="bw-req">*</span></label>
+              <div class="bw-input-wrap">
+                <input id="b-email" class="bw-input" type="email" placeholder="john@example.com"
+                  onblur="bwValidateField('b-email')" oninput="bwClearField('b-email')" />
+                <i class="fa-solid fa-check bw-input-check" id="b-email-check"></i>
+              </div>
+              <span class="bw-field-err" id="b-email-err"></span>
             </div>
           </div>
-          <span class="field-error" id="rwa-doc-err"></span>
         </div>
-        <div class="legal-banner legal-banner-warning">
-          <i class="fa-solid fa-gavel" style="flex-shrink:0; margin-top:2px;"></i>
+
+        <!-- Card: Location -->
+        <div class="bw-card">
+          <div class="bw-card-eyebrow"><i class="fa-solid fa-location-dot"></i> Location</div>
+          <div class="bw-form-grid">
+            <div class="bw-field">
+              <label class="bw-label" for="b-country">Country <span class="bw-req">*</span></label>
+              <div class="bw-input-wrap">
+                <select id="b-country" class="bw-input bw-select"
+                  onblur="bwValidateField('b-country')" onchange="bwClearField('b-country')">
+                  <option value="">— Select country —</option>
+                  <option>United States</option><option>United Kingdom</option><option>Germany</option>
+                  <option>France</option><option>Japan</option><option>Brazil</option>
+                  <option>Canada</option><option>Australia</option><option>India</option>
+                  <option>China</option><option>Singapore</option><option>UAE</option>
+                  <option>Mexico</option><option>Argentina</option><option>Netherlands</option>
+                  <option>Spain</option><option>Italy</option><option>Portugal</option>
+                  <option>Switzerland</option><option>Sweden</option><option>Norway</option>
+                  <option>South Korea</option><option>Indonesia</option><option>Nigeria</option>
+                  <option>South Africa</option><option>Turkey</option><option>Other</option>
+                </select>
+                <i class="fa-solid fa-check bw-input-check" id="b-country-check"></i>
+              </div>
+              <span class="bw-field-err" id="b-country-err"></span>
+            </div>
+            <div class="bw-field">
+              <label class="bw-label" for="b-city">City <span class="bw-req">*</span></label>
+              <div class="bw-input-wrap">
+                <input id="b-city" class="bw-input" type="text" placeholder="e.g. New York"
+                  onblur="bwValidateField('b-city')" oninput="bwClearField('b-city')" />
+                <i class="fa-solid fa-check bw-input-check" id="b-city-check"></i>
+              </div>
+              <span class="bw-field-err" id="b-city-err"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card: Profile -->
+        <div class="bw-card">
+          <div class="bw-card-eyebrow"><i class="fa-solid fa-user-circle"></i> Profile</div>
+
+          <!-- Borrower type toggle -->
+          <div class="bw-field" style="margin-bottom:20px;">
+            <label class="bw-label">Borrower type <span class="bw-req">*</span></label>
+            <div class="bw-type-toggle">
+              <button class="bw-type-btn selected" data-borrower-type="individual"
+                onclick="selectBorrowerType(this,'individual')">
+                <span class="bw-type-icon">👤</span>
+                <span class="bw-type-title">Individual</span>
+                <span class="bw-type-desc">Personal loan request</span>
+              </button>
+              <button class="bw-type-btn" data-borrower-type="company"
+                onclick="selectBorrowerType(this,'company')">
+                <span class="bw-type-icon">🏢</span>
+                <span class="bw-type-title">Company</span>
+                <span class="bw-type-desc">Business loan request</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Company notice (shown when Company selected) -->
+          <div id="bw-company-notice" class="bw-info-banner" style="display:none;">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>Additional verification documents may be required for company borrowers.</span>
+          </div>
+
+          <div class="bw-field">
+            <label class="bw-label" for="b-employment">
+              Employment status
+              <span class="bw-optional">Optional</span>
+            </label>
+            <select id="b-employment" class="bw-input bw-select">
+              <option value="">— Select status —</option>
+              <option>Employed (Full-time)</option>
+              <option>Employed (Part-time)</option>
+              <option>Self-employed / Freelancer</option>
+              <option>Business Owner</option>
+              <option>Student</option>
+              <option>Retired</option>
+              <option>Unemployed</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Step footer -->
+        <div class="bw-step-footer">
+          <div></div>
+          <button class="bw-btn-primary" onclick="borrowStep(2)">
+            Continue to Loan Details <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+           STEP 2 — LOAN DETAILS
+           ════════════════════════════════════════════════════════ -->
+      <div id="borrow-step-2" class="bw-step-content" style="display:none;">
+
+        <!-- Main inputs card -->
+        <div class="bw-card">
+          <div class="bw-card-eyebrow"><i class="fa-solid fa-sliders"></i> Configure your loan</div>
+          <div class="bw-form-grid">
+            <!-- Amount -->
+            <div class="bw-field">
+              <label class="bw-label" for="b-amount">Loan amount <span class="bw-req">*</span></label>
+              <div class="bw-input-wrap bw-input-affix">
+                <span class="bw-prefix-icon">
+                  <i class="fa-solid fa-dollar-sign"></i>
+                </span>
+                <input id="b-amount" class="bw-input bw-input-with-prefix" type="number"
+                  min="1" step="0.01" placeholder="5 000"
+                  onblur="bwValidateField('b-amount')" oninput="bwClearField('b-amount'); updateLoanPreview()" />
+                <span class="bw-suffix">USDC</span>
+                <i class="fa-solid fa-check bw-input-check" id="b-amount-check"></i>
+              </div>
+              <span class="bw-field-err" id="b-amount-err"></span>
+            </div>
+
+            <!-- Installments -->
+            <div class="bw-field">
+              <label class="bw-label" for="b-installments">Number of installments <span class="bw-req">*</span></label>
+              <div class="bw-input-wrap">
+                <select id="b-installments" class="bw-input bw-select"
+                  onchange="updateLoanPreview(); bwClearField('b-installments')"
+                  onblur="bwValidateField('b-installments')">
+                  <option value="">— Select —</option>
+                  <option value="1">1 installment (lump sum)</option>
+                  <option value="2">2 installments</option>
+                  <option value="3">3 installments</option>
+                  <option value="4">4 installments</option>
+                  <option value="5">5 installments</option>
+                  <option value="6">6 installments</option>
+                  <option value="7">7 installments</option>
+                  <option value="8">8 installments</option>
+                  <option value="9">9 installments</option>
+                  <option value="10">10 installments</option>
+                </select>
+                <i class="fa-solid fa-check bw-input-check" id="b-installments-check"></i>
+              </div>
+              <span class="bw-field-hint">Maximum 10 installments</span>
+              <span class="bw-field-err" id="b-installments-err"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Calculator card -->
+        <div class="bw-calc-card" id="loan-preview" style="display:none;">
+          <div class="bw-calc-header">
+            <i class="fa-solid fa-calculator"></i>
+            <span>Live Payment Calculator</span>
+            <span class="bw-calc-note">Based on max rate (5%/month)</span>
+          </div>
+          <div class="bw-calc-grid">
+            <div class="bw-calc-cell">
+              <span class="bw-calc-label">Principal</span>
+              <span class="bw-calc-value" id="prev-principal">—</span>
+            </div>
+            <div class="bw-calc-cell bw-calc-cell-accent">
+              <span class="bw-calc-label">Total repayment</span>
+              <span class="bw-calc-value bw-calc-value-cyan" id="prev-total">—</span>
+            </div>
+            <div class="bw-calc-cell">
+              <span class="bw-calc-label">Per installment</span>
+              <span class="bw-calc-value bw-calc-value-green" id="prev-inst">—</span>
+            </div>
+            <div class="bw-calc-cell">
+              <span class="bw-calc-label">Total interest</span>
+              <span class="bw-calc-value bw-calc-value-muted" id="prev-interest">—</span>
+            </div>
+          </div>
+          <div class="bw-calc-note-banner">
+            <i class="fa-solid fa-circle-info"></i>
+            Final rate is set by your lender (≤ 5%/month fixed, no compounding).
+          </div>
+        </div>
+
+        <!-- Loan purpose card -->
+        <div class="bw-card">
+          <div class="bw-card-eyebrow"><i class="fa-solid fa-tag"></i> Loan purpose <span class="bw-optional">Optional</span></div>
+
+          <!-- Purpose chips -->
+          <div class="bw-field" style="margin-bottom:16px;">
+            <label class="bw-label">Select a category</label>
+            <div class="bw-purpose-chips" id="bw-purpose-chips">
+              <button class="bw-purpose-chip" onclick="selectLoanPurpose(this,'Business')">💼 Business</button>
+              <button class="bw-purpose-chip" onclick="selectLoanPurpose(this,'Personal')">👤 Personal</button>
+              <button class="bw-purpose-chip" onclick="selectLoanPurpose(this,'Emergency')">🚨 Emergency</button>
+              <button class="bw-purpose-chip" onclick="selectLoanPurpose(this,'Investment')">📈 Investment</button>
+              <button class="bw-purpose-chip" onclick="selectLoanPurpose(this,'Education')">🎓 Education</button>
+              <button class="bw-purpose-chip" onclick="selectLoanPurpose(this,'Medical')">🏥 Medical</button>
+              <button class="bw-purpose-chip" onclick="selectLoanPurpose(this,'Custom')">✏️ Other</button>
+            </div>
+          </div>
+          <div class="bw-field">
+            <label class="bw-label" for="b-purpose">Additional details <span class="bw-optional">Optional</span></label>
+            <textarea id="b-purpose" class="bw-input bw-textarea" rows="2"
+              placeholder="Brief description of how you plan to use the funds…"></textarea>
+          </div>
+        </div>
+
+        <div class="bw-step-footer">
+          <button class="bw-btn-secondary" onclick="borrowStep(1)"><i class="fa-solid fa-arrow-left"></i> Back</button>
+          <button class="bw-btn-primary" onclick="borrowStep(3)">Continue to Collateral <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+           STEP 3 — COLLATERAL
+           ════════════════════════════════════════════════════════ -->
+      <div id="borrow-step-3" class="bw-step-content" style="display:none;">
+
+        <!-- Collateral type selector -->
+        <div class="bw-collateral-intro">
+          <h3 class="bw-collateral-intro-title">Choose your collateral type</h3>
+          <p class="bw-collateral-intro-sub">Select how you want to secure this loan. You can only choose one type.</p>
+        </div>
+
+        <div class="bw-collateral-cards">
+          <div class="bw-col-card selected" id="col-rwa-card" onclick="selectCollateralType('rwa')">
+            <div class="bw-col-card-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div class="bw-col-card-icon bw-col-icon-rwa">🏠</div>
+            <div class="bw-col-card-body">
+              <div class="bw-col-card-title">Real-World Asset (RWA)</div>
+              <div class="bw-col-card-desc">Car, house, jewelry, land or any physical asset. Notarized document uploaded to IPFS. Hash stored on-chain.</div>
+              <div class="bw-col-card-tag bw-col-tag-rwa">⚖️ Off-chain enforcement</div>
+            </div>
+          </div>
+          <div class="bw-col-card" id="col-crypto-card" onclick="selectCollateralType('crypto')">
+            <div class="bw-col-card-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div class="bw-col-card-icon bw-col-icon-crypto">🔐</div>
+            <div class="bw-col-card-body">
+              <div class="bw-col-card-title">Crypto Asset</div>
+              <div class="bw-col-card-desc">USDC or any ERC-20 token. Locked in smart-contract escrow. Automatically released on full repayment.</div>
+              <div class="bw-col-card-tag bw-col-tag-crypto">⚡ On-chain enforcement</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── RWA FORM (progressive disclosure) ── -->
+        <div id="col-rwa-form" class="bw-collateral-form">
+
+          <div class="bw-card">
+            <div class="bw-card-eyebrow"><i class="fa-solid fa-file-contract"></i> Asset details</div>
+            <div class="bw-form-grid">
+              <div class="bw-field">
+                <label class="bw-label" for="rwa-asset-type">Asset type <span class="bw-req">*</span></label>
+                <div class="bw-input-wrap">
+                  <select id="rwa-asset-type" class="bw-input bw-select"
+                    onchange="handleRwaCustom(this); bwClearField('rwa-asset-type')"
+                    onblur="bwValidateField('rwa-asset-type')">
+                    <option value="">— Select asset —</option>
+                    <option value="Car">🚗 Car</option>
+                    <option value="Motorcycle">🏍️ Motorcycle</option>
+                    <option value="House">🏠 House / Apartment</option>
+                    <option value="Land">🌍 Land / Real Estate</option>
+                    <option value="Jewelry">💍 Jewelry</option>
+                    <option value="Art">🎨 Artwork / Collectible</option>
+                    <option value="Equipment">🔧 Equipment / Machinery</option>
+                    <option value="Vehicle">🚛 Commercial Vehicle</option>
+                    <option value="custom">✏️ Custom (specify below)</option>
+                  </select>
+                  <i class="fa-solid fa-check bw-input-check" id="rwa-asset-type-check"></i>
+                </div>
+                <span class="bw-field-err" id="rwa-asset-type-err"></span>
+              </div>
+
+              <div class="bw-field" id="rwa-custom-group" style="display:none;">
+                <label class="bw-label" for="rwa-asset-custom">Custom asset type <span class="bw-req">*</span></label>
+                <div class="bw-input-wrap">
+                  <input id="rwa-asset-custom" class="bw-input" type="text" placeholder="e.g. Vintage watch collection" />
+                </div>
+              </div>
+            </div>
+
+            <div class="bw-field">
+              <label class="bw-label" for="rwa-description">Asset description <span class="bw-req">*</span></label>
+              <textarea id="rwa-description" class="bw-input bw-textarea" rows="3"
+                placeholder="Make, model, year, condition, serial number, notable features…"
+                onblur="bwValidateField('rwa-description')" oninput="bwClearField('rwa-description')"></textarea>
+              <span class="bw-field-err" id="rwa-description-err"></span>
+            </div>
+
+            <div class="bw-form-grid">
+              <div class="bw-field">
+                <label class="bw-label" for="rwa-value">Estimated value (USD) <span class="bw-req">*</span></label>
+                <div class="bw-input-wrap bw-input-affix">
+                  <span class="bw-prefix-icon"><i class="fa-solid fa-dollar-sign"></i></span>
+                  <input id="rwa-value" class="bw-input bw-input-with-prefix" type="number"
+                    min="1" placeholder="15 000"
+                    onblur="bwValidateField('rwa-value')" oninput="bwClearField('rwa-value')" />
+                  <span class="bw-suffix">USD</span>
+                </div>
+                <span class="bw-field-err" id="rwa-value-err"></span>
+              </div>
+
+              <div class="bw-field">
+                <label class="bw-label" for="rwa-jurisdiction">Country / Jurisdiction <span class="bw-req">*</span></label>
+                <div class="bw-input-wrap">
+                  <input id="rwa-jurisdiction" class="bw-input" type="text"
+                    placeholder="e.g. United States — California"
+                    onblur="bwValidateField('rwa-jurisdiction')" oninput="bwClearField('rwa-jurisdiction')" />
+                  <i class="fa-solid fa-check bw-input-check" id="rwa-jurisdiction-check"></i>
+                </div>
+                <span class="bw-field-err" id="rwa-jurisdiction-err"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Document upload -->
+          <div class="bw-card">
+            <div class="bw-card-eyebrow"><i class="fa-solid fa-upload"></i> Ownership document <span class="bw-req">*</span></div>
+            <p class="bw-card-hint">Upload a notarized PDF, JPG or PNG. The file is hashed (SHA-256) and optionally pinned to IPFS. Only the hash is stored on-chain — the original file is never public.</p>
+
+            <div class="bw-upload-zone" id="rwa-upload-zone">
+              <input type="file" id="rwa-doc-file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleDocUpload(this)" />
+              <div class="bw-upload-icon">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+              </div>
+              <div class="bw-upload-main">Drop file here or <span class="bw-upload-browse">browse</span></div>
+              <div class="bw-upload-sub">PDF, JPG, PNG · Max 10 MB · Notarized document required</div>
+            </div>
+
+            <div id="rwa-doc-info" class="bw-doc-info" style="display:none;">
+              <div class="bw-doc-info-icon">📎</div>
+              <div class="bw-doc-info-body">
+                <div id="rwa-doc-name" class="bw-doc-name"></div>
+                <div id="rwa-doc-hash" class="bw-doc-hash"></div>
+              </div>
+              <span class="bw-doc-badge"><i class="fa-solid fa-check"></i> Hash computed</span>
+            </div>
+            <span class="bw-field-err" id="rwa-doc-err"></span>
+          </div>
+
+          <!-- RWA legal notice -->
+          <div class="bw-legal-notice bw-legal-warning">
+            <i class="fa-solid fa-gavel bw-legal-icon"></i>
+            <div>
+              <strong>Off-chain enforcement notice:</strong> RWA collateral is legally binding only in your jurisdiction. In case of default, lenders must pursue remedies via local courts. ArcFi facilitates the digital agreement but does not enforce physical asset seizure.
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CRYPTO FORM (progressive disclosure) ── -->
+        <div id="col-crypto-form" class="bw-collateral-form" style="display:none;">
+
+          <div class="bw-card">
+            <div class="bw-card-eyebrow"><i class="fa-solid fa-coins"></i> Token selection</div>
+
+            <div class="bw-field" style="margin-bottom:20px;">
+              <label class="bw-label">Collateral token <span class="bw-req">*</span></label>
+              <div class="bw-token-chips" id="crypto-token-chips">
+                <button class="bw-token-chip selected" onclick="selectCryptoToken(this,'usdc')">
+                  <span class="bw-token-icon">💵</span>USDC
+                </button>
+                <button class="bw-token-chip" onclick="selectCryptoToken(this,'custom')">
+                  <span class="bw-token-icon">🔷</span>Custom ERC-20
+                </button>
+              </div>
+            </div>
+
+            <div id="crypto-custom-addr-group" class="bw-field" style="display:none;">
+              <label class="bw-label" for="crypto-token-addr">Token contract address <span class="bw-req">*</span></label>
+              <div class="bw-input-wrap">
+                <input id="crypto-token-addr" class="bw-input bw-mono" type="text" placeholder="0x…" />
+              </div>
+              <span class="bw-field-hint">ERC-20 contract address on Arc Testnet</span>
+            </div>
+          </div>
+
+          <div class="bw-card">
+            <div class="bw-card-eyebrow"><i class="fa-solid fa-shield-halved"></i> Collateral amount &amp; ratio</div>
+
+            <div class="bw-form-grid">
+              <div class="bw-field">
+                <label class="bw-label" for="crypto-amount">Collateral amount <span class="bw-req">*</span></label>
+                <div class="bw-input-wrap bw-input-affix">
+                  <span class="bw-prefix-icon"><i class="fa-solid fa-lock"></i></span>
+                  <input id="crypto-amount" class="bw-input bw-input-with-prefix" type="number"
+                    min="0" step="0.000001" placeholder="6 000"
+                    oninput="updateCollateralRatio(); bwClearField('crypto-amount')"
+                    onblur="bwValidateField('crypto-amount')" />
+                  <span class="bw-suffix" id="crypto-token-symbol">USDC</span>
+                </div>
+                <span class="bw-field-err" id="crypto-amount-err"></span>
+              </div>
+
+              <div class="bw-field">
+                <label class="bw-label">
+                  Collateralization ratio — <span id="ratio-display" class="bw-ratio-value">120%</span>
+                </label>
+                <input type="range" id="crypto-ratio" class="bw-slider"
+                  min="120" max="300" step="10" value="120"
+                  oninput="updateRatioDisplay(this.value)" />
+                <div class="bw-slider-labels">
+                  <span>120% (min)</span>
+                  <span>300% (max protection)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coverage indicator -->
+            <div class="bw-coverage-card" id="collateral-ratio-indicator">
+              <div class="bw-coverage-row">
+                <span class="bw-coverage-label">Coverage status</span>
+                <span class="bw-coverage-badge" id="ratio-coverage-text">—</span>
+              </div>
+              <div class="bw-coverage-track">
+                <div class="bw-coverage-fill" id="ratio-bar"></div>
+              </div>
+              <div class="bw-coverage-amounts">
+                <span>Loan: <strong id="ratio-loan-val" class="bw-mono">$0</strong></span>
+                <span>Collateral: <strong id="ratio-col-val" class="bw-mono bw-text-cyan">$0</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Crypto legal notice -->
+          <div class="bw-legal-notice bw-legal-info">
+            <i class="fa-solid fa-lock bw-legal-icon"></i>
+            <div>
+              <strong>On-chain escrow:</strong> Your tokens are locked in the smart contract on submission. Released automatically when the loan is fully repaid. After 3+ days overdue, the lender may trigger liquidation.
+            </div>
+          </div>
+        </div>
+
+        <div class="bw-step-footer">
+          <button class="bw-btn-secondary" onclick="borrowStep(2)"><i class="fa-solid fa-arrow-left"></i> Back</button>
+          <button class="bw-btn-primary" onclick="borrowStep(4)">Review &amp; Submit <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+           STEP 4 — REVIEW & SUBMIT
+           ════════════════════════════════════════════════════════ -->
+      <div id="borrow-step-4" class="bw-step-content" style="display:none;">
+
+        <div class="bw-review-header">
+          <div class="bw-review-header-icon">📋</div>
           <div>
-            <strong>Off-chain Enforcement Notice:</strong> RWA collateral is legally binding only in your jurisdiction. In case of default, lenders must pursue legal remedies via local courts. ArcFi facilitates the digital agreement but does not enforce physical asset seizure.
-          </div>
-        </div>
-      </div>
-
-      <!-- Crypto Collateral Form -->
-      <div id="col-crypto-form" class="form-section" style="display:none;">
-        <div class="form-group">
-          <label class="form-label">Collateral Token <span class="req">*</span></label>
-          <div class="token-chips" id="crypto-token-chips">
-            <button class="token-chip selected" onclick="selectCryptoToken(this,'usdc')">💵 USDC</button>
-            <button class="token-chip" onclick="selectCryptoToken(this,'custom')">🔷 Custom ERC-20</button>
-          </div>
-        </div>
-        <div id="crypto-custom-addr-group" class="form-group" style="display:none;">
-          <label class="form-label">Token Contract Address <span class="req">*</span></label>
-          <input id="crypto-token-addr" class="form-control mono" type="text" placeholder="0x..." />
-          <span class="field-hint">ERC-20 contract address on Arc Testnet</span>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Collateral Amount <span class="req">*</span></label>
-          <div class="input-group">
-            <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a1 1 0 001-1V8a1 1 0 00-.293-.707l-5-5A1 1 0 0015 2H5a1 1 0 00-1 1v15a1 1 0 001 1z"/></svg>
-            <input id="crypto-amount" class="form-control" type="number" min="0" step="0.000001" placeholder="e.g. 6000" oninput="updateCollateralRatio()" />
-            <span class="input-suffix" id="crypto-token-symbol">USDC</span>
-          </div>
-          <span class="field-error" id="crypto-amount-err"></span>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Collateralization Ratio — <span id="ratio-display" class="text-cyan font-mono">120%</span></label>
-          <input type="range" id="crypto-ratio" min="120" max="300" step="10" value="120" oninput="updateRatioDisplay(this.value)" />
-          <div class="flex" style="justify-content:space-between; margin-top:4px;">
-            <span class="text-xs text-muted">120% (Min)</span>
-            <span class="text-xs text-muted">300% (Max protection)</span>
+            <h3 class="bw-review-title">Review your loan request</h3>
+            <p class="bw-review-sub">Please verify all details carefully before signing. This will create an on-chain record on Arc Testnet.</p>
           </div>
         </div>
 
-        <!-- Ratio indicator -->
-        <div id="collateral-ratio-indicator" class="card card-sm" style="background:var(--bg-input);">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-muted">Collateral Coverage</span>
-            <span id="ratio-coverage-text" class="badge badge-active font-mono">—</span>
+        <!-- Summary cards populated by buildReviewPanel() -->
+        <div id="loan-review-content" class="bw-review-grid"></div>
+
+        <!-- Financial summary strip -->
+        <div class="bw-fin-summary" id="bw-fin-summary">
+          <div class="bw-fin-row">
+            <span class="bw-fin-label">Loan amount</span>
+            <span class="bw-fin-val" id="bw-fin-principal">—</span>
           </div>
-          <div class="progress-track" style="margin-top:10px;">
-            <div class="progress-fill" id="ratio-bar" style="width:0%"></div>
+          <div class="bw-fin-sep"></div>
+          <div class="bw-fin-row">
+            <span class="bw-fin-label">Interest rate</span>
+            <span class="bw-fin-val bw-fin-green">≤ 5% / month</span>
           </div>
-          <div class="flex items-center justify-between" style="margin-top:8px;">
-            <span class="text-xs text-muted">Loan: <span class="font-mono" id="ratio-loan-val">$0</span></span>
-            <span class="text-xs text-muted">Collateral: <span class="font-mono text-cyan" id="ratio-col-val">$0</span></span>
+          <div class="bw-fin-sep"></div>
+          <div class="bw-fin-row">
+            <span class="bw-fin-label">Installments</span>
+            <span class="bw-fin-val" id="bw-fin-installments">—</span>
+          </div>
+          <div class="bw-fin-sep"></div>
+          <div class="bw-fin-row">
+            <span class="bw-fin-label">Max total repayment</span>
+            <span class="bw-fin-val bw-fin-cyan" id="bw-fin-total">—</span>
           </div>
         </div>
 
-        <div class="legal-banner legal-banner-info">
-          <i class="fa-solid fa-lock" style="flex-shrink:0; margin-top:2px;"></i>
+        <!-- Consent notice -->
+        <div class="bw-legal-notice bw-legal-warning">
+          <i class="fa-solid fa-signature bw-legal-icon"></i>
           <div>
-            <strong>On-chain Escrow:</strong> Your tokens will be locked in the smart contract upon submission. They are automatically released when the loan is fully repaid. In case of default (3+ days overdue), the lender can trigger liquidation.
+            By submitting, you digitally sign this loan request via your wallet. This creates a binding on-chain record on Arc Testnet. You acknowledge the interest cap of 5%/month, the terms of your selected collateral type, and the non-custodial nature of this protocol.
           </div>
         </div>
-      </div>
 
-      <div class="flex" style="justify-content:space-between; margin-top:24px; gap:12px;">
-        <button class="btn btn-secondary" onclick="borrowStep(2)"><i class="fa-solid fa-arrow-left"></i> Back</button>
-        <button class="btn btn-primary" onclick="borrowStep(4)">Review Loan <i class="fa-solid fa-arrow-right"></i></button>
-      </div>
-    </div>
-
-    <!-- Step 4: Review & Submit -->
-    <div id="borrow-step-4" class="card card-lg" style="display:none;">
-      <div class="card-header">
-        <div class="card-title"><i class="fa-solid fa-clipboard-check text-cyan"></i>Review &amp; Submit</div>
-        <span class="badge badge-active">Step 4 of 4</span>
-      </div>
-      <div id="loan-review-content" class="space-y-4"></div>
-      <div class="legal-banner legal-banner-warning" style="margin-top:20px;">
-        <i class="fa-solid fa-signature" style="flex-shrink:0; margin-top:2px;"></i>
-        <div>
-          By submitting, you digitally sign this loan request via your wallet. This creates a binding on-chain record on Arc Testnet. You acknowledge the terms, interest cap of 5%/month, and legal conditions of your selected collateral type.
+        <div class="bw-step-footer">
+          <button class="bw-btn-secondary" onclick="borrowStep(3)"><i class="fa-solid fa-arrow-left"></i> Back</button>
+          <button class="bw-btn-submit" id="submit-loan-btn" onclick="submitLoan()">
+            <i class="fa-solid fa-paper-plane"></i>
+            Sign &amp; Submit Loan Request
+          </button>
         </div>
       </div>
-      <div class="flex" style="justify-content:space-between; margin-top:24px; gap:12px;">
-        <button class="btn btn-secondary" onclick="borrowStep(3)"><i class="fa-solid fa-arrow-left"></i> Back</button>
-        <button class="btn btn-primary btn-lg" id="submit-loan-btn" onclick="submitLoan()">
-          <i class="fa-solid fa-paper-plane"></i> Sign &amp; Submit Loan
-        </button>
-      </div>
-    </div>
+
+    </div><!-- /borrow-wizard -->
   </div>
 
   <!-- ══ PAGE: LEND ════════════════════════════════════════════════════════════ -->

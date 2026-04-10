@@ -268,6 +268,62 @@ function selectBorrowerType(el, type) {
   borrowerType = type;
   document.querySelectorAll('[data-borrower-type]').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
+  // Show/hide company notice (new design)
+  const notice = document.getElementById('bw-company-notice');
+  if (notice) notice.style.display = type === 'company' ? 'flex' : 'none';
+}
+
+// ── Loan purpose chip selection ───────────────────────────────
+function selectLoanPurpose(el, purpose) {
+  document.querySelectorAll('.bw-purpose-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  // Append purpose to textarea if empty
+  const textarea = document.getElementById('b-purpose');
+  if (textarea && !textarea.value.trim()) {
+    textarea.value = purpose !== 'Custom' ? purpose : '';
+    if (purpose === 'Custom') textarea.focus();
+  }
+}
+
+// ── Inline blur validation helpers ───────────────────────────
+function bwValidateField(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const val = el.value?.trim();
+  const errEl = document.getElementById(`${id}-err`);
+  const checkEl = document.getElementById(`${id}-check`);
+
+  let msg = '';
+  if (!val) {
+    const labels = {
+      'b-fullname':'Full name is required','b-email':'Email is required',
+      'b-country':'Country is required','b-city':'City is required',
+      'b-amount':'Loan amount is required','b-installments':'Select number of installments',
+      'rwa-asset-type':'Select an asset type','rwa-description':'Description is required',
+      'rwa-value':'Estimated value is required','rwa-jurisdiction':'Jurisdiction is required',
+      'crypto-amount':'Collateral amount is required'
+    };
+    msg = labels[id] || 'This field is required';
+  } else if (id === 'b-email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+    msg = 'Enter a valid email address';
+  }
+
+  if (msg) {
+    el.classList.add('bw-input-error'); el.classList.remove('bw-input-valid');
+    if (errEl) { errEl.textContent = msg; errEl.classList.add('show'); }
+    if (checkEl) checkEl.classList.remove('visible');
+  } else {
+    el.classList.remove('bw-input-error'); el.classList.add('bw-input-valid');
+    if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
+    if (checkEl) checkEl.classList.add('visible');
+  }
+}
+
+function bwClearField(id) {
+  const el  = document.getElementById(id);
+  const err = document.getElementById(`${id}-err`);
+  if (el)  { el.classList.remove('bw-input-error'); }
+  if (err) { err.textContent = ''; err.classList.remove('show'); }
 }
 
 function selectCollateralType(type) {
@@ -280,7 +336,7 @@ function selectCollateralType(type) {
 
 function selectCryptoToken(el, token) {
   rwaCryptoToken = token;
-  document.querySelectorAll('#crypto-token-chips .token-chip').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#crypto-token-chips .bw-token-chip').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
   document.getElementById('crypto-custom-addr-group').style.display = token === 'custom' ? 'flex' : 'none';
   document.getElementById('crypto-token-symbol').textContent = token === 'usdc' ? 'USDC' : 'TOKEN';
@@ -330,7 +386,7 @@ function updateLoanPreview() {
   const installments = parseInt(document.getElementById('b-installments')?.value || 0);
   const preview = document.getElementById('loan-preview');
 
-  if (!amount || !installments) { preview.style.display = 'none'; return; }
+  if (!amount || !installments) { if(preview) preview.style.display = 'none'; return; }
 
   // Max rate preview
   const monthlyRate = 0.05;
@@ -338,10 +394,13 @@ function updateLoanPreview() {
   const total = amount + totalInterest;
   const perInst = total / installments;
 
-  document.getElementById('prev-principal').textContent = `$${amount.toFixed(2)}`;
-  document.getElementById('prev-total').textContent     = `$${total.toFixed(2)}`;
-  document.getElementById('prev-inst').textContent      = `$${perInst.toFixed(2)}`;
-  preview.style.display = 'block';
+  const fmt = n => `$${n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+  document.getElementById('prev-principal').textContent = fmt(amount);
+  document.getElementById('prev-total').textContent     = fmt(total);
+  document.getElementById('prev-inst').textContent      = fmt(perInst);
+  const interestEl = document.getElementById('prev-interest');
+  if (interestEl) interestEl.textContent = fmt(totalInterest);
+  if(preview) preview.style.display = 'block';
 }
 
 document.getElementById('b-amount')?.addEventListener('input', updateLoanPreview);
@@ -367,9 +426,8 @@ function updateCollateralRatio() {
   document.getElementById('ratio-col-val').textContent       = `$${colAmt.toFixed(2)}`;
 
   const bar = document.getElementById('ratio-bar');
-  bar.className = 'progress-fill';
+  bar.className = 'bw-coverage-fill';
   if (coverage >= 150)  bar.classList.add('green');
-  else if (coverage >= 120) bar.classList.add('');
   else bar.classList.add('red');
 }
 
@@ -381,18 +439,33 @@ function borrowStep(step) {
 
   // Hide all steps
   [1,2,3,4].forEach(i => {
-    document.getElementById(`borrow-step-${i}`).style.display = 'none';
+    const el = document.getElementById(`borrow-step-${i}`);
+    if (el) { el.style.display = 'none'; el.classList.remove('bw-animate-in'); }
   });
-  document.getElementById(`borrow-step-${step}`).style.display = 'block';
+  const active = document.getElementById(`borrow-step-${step}`);
+  if (active) {
+    active.style.display = 'block';
+    requestAnimationFrame(() => active.classList.add('bw-animate-in'));
+  }
 
-  // Update stepper
+  // Update stepper nodes
   [1,2,3,4].forEach(i => {
     const node = document.getElementById(`step-${i}`);
     if (!node) return;
     node.classList.remove('active','done');
-    if (i < step)       node.classList.add('done');
+    if (i < step)        node.classList.add('done');
     else if (i === step) node.classList.add('active');
+    // connector lines
+    const line = document.getElementById(`step-line-${i}`);
+    if (line) line.classList.toggle('done', i < step);
   });
+
+  // Update progress bar
+  const pct = ((step - 1) / 3) * 100;
+  const fill = document.getElementById('bw-progress-fill');
+  const lbl  = document.getElementById('bw-progress-label');
+  if (fill) fill.style.width = `${pct}%`;
+  if (lbl)  lbl.textContent  = `Step ${step} of 4`;
 
   if (step === 4) buildReviewPanel();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -478,37 +551,60 @@ function buildReviewPanel() {
   const ratio     = document.getElementById('crypto-ratio')?.value;
 
   const html = `
-    <div class="space-y-4">
-      <div class="card card-sm" style="background:var(--bg-input);">
-        <div class="card-title" style="font-size:13px; margin-bottom:12px; color:var(--cyan);">👤 Borrower Information</div>
-        <div class="detail-row"><span class="detail-label">Full Name</span><span class="detail-value">${fullName}</span></div>
-        <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${email}</span></div>
-        <div class="detail-row"><span class="detail-label">Location</span><span class="detail-value">${city}, ${country}</span></div>
-        <div class="detail-row" style="border:none;"><span class="detail-label">Type</span><span class="detail-value">${borrowerType === 'company' ? '🏢 Company' : '👤 Individual'}${employment ? ' — ' + employment : ''}</span></div>
+    <div class="bw-review-card">
+      <div class="bw-review-card-header">
+        <span><i class="fa-solid fa-user"></i> Personal information</span>
+        <button class="bw-review-edit" onclick="borrowStep(1)"><i class="fa-solid fa-pen"></i> Edit</button>
       </div>
-      <div class="card card-sm" style="background:var(--bg-input);">
-        <div class="card-title" style="font-size:13px; margin-bottom:12px; color:var(--cyan);">💵 Loan Terms</div>
-        <div class="detail-row"><span class="detail-label">Principal Amount</span><span class="detail-value mono text-cyan">$${parseFloat(amount).toFixed(2)} USDC</span></div>
-        <div class="detail-row"><span class="detail-label">Installments</span><span class="detail-value">${installments}</span></div>
-        <div class="detail-row" style="border:none;"><span class="detail-label">Interest Rate</span><span class="detail-value text-green">Set by lender (≤ 5%/month)</span></div>
+      <div class="bw-review-rows">
+        <div class="bw-review-row"><span class="bw-review-lbl">Full name</span><span class="bw-review-val">${fullName}</span></div>
+        <div class="bw-review-row"><span class="bw-review-lbl">Email</span><span class="bw-review-val">${email}</span></div>
+        <div class="bw-review-row"><span class="bw-review-lbl">Location</span><span class="bw-review-val">${city}, ${country}</span></div>
+        <div class="bw-review-row"><span class="bw-review-lbl">Type</span><span class="bw-review-val">${borrowerType === 'company' ? '🏢 Company' : '👤 Individual'}${employment ? ' — ' + employment : ''}</span></div>
       </div>
-      <div class="card card-sm" style="background:var(--bg-input);">
-        <div class="card-title" style="font-size:13px; margin-bottom:12px; color:var(--cyan);">🛡️ Collateral</div>
+    </div>
+    <div class="bw-review-card">
+      <div class="bw-review-card-header">
+        <span><i class="fa-solid fa-file-invoice-dollar"></i> Loan terms</span>
+        <button class="bw-review-edit" onclick="borrowStep(2)"><i class="fa-solid fa-pen"></i> Edit</button>
+      </div>
+      <div class="bw-review-rows">
+        <div class="bw-review-row"><span class="bw-review-lbl">Principal amount</span><span class="bw-review-val bw-mono bw-text-cyan">$${parseFloat(amount).toFixed(2)} USDC</span></div>
+        <div class="bw-review-row"><span class="bw-review-lbl">Installments</span><span class="bw-review-val">${installments}</span></div>
+        <div class="bw-review-row"><span class="bw-review-lbl">Interest rate</span><span class="bw-review-val bw-text-green">Set by lender (≤ 5%/month)</span></div>
+      </div>
+    </div>
+    <div class="bw-review-card">
+      <div class="bw-review-card-header">
+        <span><i class="fa-solid fa-shield-halved"></i> Collateral</span>
+        <button class="bw-review-edit" onclick="borrowStep(3)"><i class="fa-solid fa-pen"></i> Edit</button>
+      </div>
+      <div class="bw-review-rows">
         ${collateralType === 'rwa' ? `
-          <div class="detail-row"><span class="detail-label">Type</span><span class="badge badge-rwa">🏠 Real-World Asset</span></div>
-          <div class="detail-row"><span class="detail-label">Asset</span><span class="detail-value">${assetType}</span></div>
-          <div class="detail-row"><span class="detail-label">Estimated Value</span><span class="detail-value mono">$${parseFloat(rwaVal||0).toFixed(2)}</span></div>
-          <div class="detail-row" style="border:none;"><span class="detail-label">Document Hash</span><span class="detail-value mono text-xs break-all">${uploadedDocHash ? uploadedDocHash.slice(0,32)+'…' : '—'}</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Type</span><span class="badge badge-rwa">🏠 Real-World Asset</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Asset</span><span class="bw-review-val">${assetType}</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Estimated value</span><span class="bw-review-val bw-mono">$${parseFloat(rwaVal||0).toFixed(2)}</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Document hash</span><span class="bw-review-val bw-mono" style="font-size:11px;">${uploadedDocHash ? uploadedDocHash.slice(0,32)+'…' : '—'}</span></div>
         ` : `
-          <div class="detail-row"><span class="detail-label">Type</span><span class="badge badge-crypto">🔐 Crypto Escrow</span></div>
-          <div class="detail-row"><span class="detail-label">Token</span><span class="detail-value">${rwaCryptoToken.toUpperCase()}</span></div>
-          <div class="detail-row"><span class="detail-label">Amount</span><span class="detail-value mono text-cyan">${parseFloat(cryptoAmt||0).toFixed(2)}</span></div>
-          <div class="detail-row" style="border:none;"><span class="detail-label">Coverage Ratio</span><span class="detail-value">${ratio}%</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Type</span><span class="badge badge-crypto">🔐 Crypto Escrow</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Token</span><span class="bw-review-val">${(typeof rwaCryptoToken !== 'undefined' ? rwaCryptoToken : 'usdc').toUpperCase()}</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Amount</span><span class="bw-review-val bw-mono bw-text-cyan">${parseFloat(cryptoAmt||0).toFixed(2)}</span></div>
+          <div class="bw-review-row"><span class="bw-review-lbl">Coverage ratio</span><span class="bw-review-val">${ratio}%</span></div>
         `}
       </div>
     </div>
   `;
   document.getElementById('loan-review-content').innerHTML = html;
+
+  // Financial summary strip
+  const amt = parseFloat(amount) || 0;
+  const inst = parseInt(installments) || 0;
+  const total = amt + amt * 0.05 * inst;
+  const fmt = n => `$${n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})} USDC`;
+  const fmtEl = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  fmtEl('bw-fin-principal', fmt(amt));
+  fmtEl('bw-fin-installments', inst ? `${inst} × ${fmt(total/inst)}` : '—');
+  fmtEl('bw-fin-total', fmt(total));
 }
 
 // ── Submit loan ───────────────────────────────────────────────
