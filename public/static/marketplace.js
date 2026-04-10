@@ -1084,24 +1084,63 @@ function selectOfferCollateral(el, val) {
 function updateOfferPreview() {
   const content = document.getElementById('offer-preview-content');
   if (!content) return;
-  const rate = parseFloat(document.getElementById('of-rate')?.value || 0);
-  const liq  = parseFloat(document.getElementById('of-liquidity')?.value || 0);
-  const max  = parseFloat(document.getElementById('of-max-loan')?.value || 0);
-  const inst = parseInt(document.getElementById('of-installments')?.value || 1);
-  if (!rate && !liq) {
-    content.innerHTML = `<div class="empty-state" style="padding:24px;"><div class="empty-icon" style="font-size:32px;">📋</div><div class="empty-desc">Fill in the form to preview.</div></div>`;
+
+  const rate      = parseFloat(document.getElementById('of-rate')?.value) || 0;
+  const principal = parseFloat(document.getElementById('of-liquidity')?.value) || 0;
+  const inst      = parseInt(document.getElementById('of-installments')?.value) || 0;
+
+  if (!rate || !principal || !inst) {
+    content.innerHTML = `
+      <div class="empty-state" style="padding:20px 0;">
+        <div class="empty-icon" style="font-size:28px;">🧮</div>
+        <div class="empty-desc">Fill all fields above to preview your earnings.</div>
+      </div>`;
     return;
   }
-  const earn = max && rate ? (max * rate / 100 * inst).toFixed(2) : '—';
+
+  const grossInterest = (principal * (rate / 100) * inst);
+  const platformFee   = (principal * PLATFORM_FEE_PCT);
+  const netReturn     = (grossInterest - platformFee);
+  const totalRepaid   = (principal + grossInterest + platformFee);
+  const perInst       = (totalRepaid / inst);
+  const yieldPct      = ((netReturn / principal) * 100);
+
+  const fmt = n => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   content.innerHTML = `
-    <div style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.2); border-radius:var(--radius-md); padding:16px; margin-bottom:12px; text-align:center;">
-      <div style="font-size:26px; font-weight:800; color:var(--cyan); font-family:'JetBrains Mono',monospace;">${rate.toFixed(2)}%/mo</div>
-      <div style="font-size:11px; color:var(--text-muted);">Fixed monthly rate</div>
+    <div style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.2); border-radius:var(--radius-md); padding:14px; margin-bottom:12px; text-align:center;">
+      <div style="font-size:24px; font-weight:800; color:var(--cyan); font-family:'JetBrains Mono',monospace;">${rate.toFixed(1)}%/mo</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Fixed monthly rate · ${inst} installment${inst>1?'s':''}</div>
     </div>
-    <div class="space-y-2">
-      <div class="detail-row" style="padding:5px 0;"><span class="detail-label">Liquidity Available</span><span class="detail-value mono text-cyan">$${liq.toLocaleString()} USDC</span></div>
-      <div class="detail-row" style="padding:5px 0;"><span class="detail-label">Max Loan</span><span class="detail-value mono">$${max.toLocaleString()}</span></div>
-      <div class="detail-row" style="padding:5px 0; border:none;"><span class="detail-label">Max Earnings</span><span class="detail-value text-green mono">+$${earn}</span></div>
+    <div class="space-y-1">
+      <div class="detail-row" style="padding:5px 0;">
+        <span class="detail-label">You lend</span>
+        <span class="detail-value mono" style="color:var(--amber);">${fmt(principal)} USDC</span>
+      </div>
+      <div class="detail-row" style="padding:5px 0;">
+        <span class="detail-label">Gross interest</span>
+        <span class="detail-value mono text-green">+${fmt(grossInterest)} USDC</span>
+      </div>
+      <div class="detail-row" style="padding:5px 0;">
+        <span class="detail-label">Platform fee (2%)</span>
+        <span class="detail-value mono" style="color:var(--amber);">−${fmt(platformFee)} USDC</span>
+      </div>
+      <div class="detail-row" style="padding:5px 0; border-bottom:1px solid var(--border);">
+        <span class="detail-label">Net return to you</span>
+        <span class="detail-value mono font-bold" style="color:var(--green);">+${fmt(netReturn)} USDC</span>
+      </div>
+      <div class="detail-row" style="padding:5px 0;">
+        <span class="detail-label">Borrower repays total</span>
+        <span class="detail-value mono">${fmt(totalRepaid)} USDC</span>
+      </div>
+      <div class="detail-row" style="padding:5px 0;">
+        <span class="detail-label">Per installment</span>
+        <span class="detail-value mono text-cyan">${fmt(perInst)} USDC</span>
+      </div>
+      <div class="detail-row" style="padding:5px 0; border:none;">
+        <span class="detail-label">Net yield</span>
+        <span class="detail-value mono font-bold" style="color:var(--green);">${yieldPct.toFixed(2)}%</span>
+      </div>
     </div>`;
 }
 
