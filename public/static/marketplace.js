@@ -714,7 +714,14 @@ async function mpViewLoanDetail(loanId) {
             ${col.description  ? `<div class="detail-row"><span class="detail-label">Description</span><span class="detail-value" style="font-size:12px;">${escapeHtml(col.description)}</span></div>` : ''}
             ${col.estimatedValueUSD && col.estimatedValueUSD !== '0' ? `<div class="detail-row"><span class="detail-label">Est. Value</span><span class="detail-value mono">$${mpFmt(col.estimatedValueUSD)}</span></div>` : ''}
             ${col.jurisdiction ? `<div class="detail-row"><span class="detail-label">Jurisdiction</span><span class="detail-value">${escapeHtml(col.jurisdiction)}</span></div>` : ''}
-            ${col.documentHash ? `<div class="detail-row"><span class="detail-label">Doc Hash</span><span class="detail-value mono" style="font-size:10px; word-break:break-all;">${col.documentHash.slice(0,20)}…</span></div>` : ''}
+            ${col.documentHash ? `<div class="detail-row"><span class="detail-label">Doc Hash</span><span class="detail-value mono" style="font-size:10px; word-break:break-all;">${col.documentHash}</span></div>` : ''}
+            ${col.documentURI && col.documentURI.startsWith('ipfs://')
+              ? `<div class="detail-row" style="border:none;"><span class="detail-label">Proof Document</span><span class="detail-value"><a href="https://gateway.pinata.cloud/ipfs/${col.documentURI.replace('ipfs://','').replace(/^0x/,'')}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.3);border-radius:6px;color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600;"><i class="fa-solid fa-file-arrow-down"></i> View Document (IPFS)</a></span></div>`
+              : col.documentURI && !col.documentURI.startsWith('file://')
+              ? `<div class="detail-row" style="border:none;"><span class="detail-label">Proof Document</span><span class="detail-value"><a href="${col.documentURI}" target="_blank" rel="noopener noreferrer" style="color:var(--cyan);font-size:11px;"><i class="fa-solid fa-file-arrow-down"></i> View Document</a></span></div>`
+              : col.documentHash
+              ? `<div class="detail-row" style="border:none;"><span class="detail-label">Proof</span><span class="detail-value mono" style="font-size:9px;color:var(--text-muted);">Hash stored on-chain — no IPFS link (configure Pinata in Settings)</span></div>`
+              : ''}
             ${col.cryptoToken  ? `<div class="detail-row"><span class="detail-label">Token</span><span class="detail-value mono" style="font-size:11px;">${col.cryptoToken}</span></div>` : ''}
             ${col.cryptoAmount && col.cryptoAmount !== '0' ? `<div class="detail-row"><span class="detail-label">Amount</span><span class="detail-value mono">${col.cryptoAmount}</span></div>` : ''}
             ${col.collateralRatio ? `<div class="detail-row" style="border:none;"><span class="detail-label">Ratio</span><span class="detail-value">${col.collateralRatio}%</span></div>` : ''}

@@ -843,7 +843,12 @@ async function viewLoanDetails(loanId) {
               <div class="detail-row"><span class="detail-label">Est. Value</span><span class="detail-value mono">$${parseFloat(col.estimatedValueUSD).toFixed(2)}</span></div>
               <div class="detail-row"><span class="detail-label">Jurisdiction</span><span class="detail-value">${col.jurisdiction}</span></div>
               <div class="detail-row"><span class="detail-label">Verified</span>${col.rwaVerified ? '<span class="badge badge-active">✓ Verified</span>' : '<span class="badge badge-pending">Pending</span>'}</div>
-              <div class="detail-row" style="border:none;"><span class="detail-label">Doc Hash</span><span class="detail-value mono text-xs break-all">${col.documentHash}</span></div>
+              <div class="detail-row"><span class="detail-label">Doc Hash</span><span class="detail-value mono text-xs break-all">${col.documentHash}</span></div>
+              ${col.documentURI && col.documentURI.startsWith('ipfs://')
+                ? `<div class="detail-row" style="border:none;"><span class="detail-label">Proof Document</span><span class="detail-value"><a href="https://gateway.pinata.cloud/ipfs/${col.documentURI.replace('ipfs://','').replace(/^0x/,'')}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.3);border-radius:6px;color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600;"><i class=\"fa-solid fa-file-arrow-down\"></i> View Document (IPFS)</a></span></div>`
+                : col.documentURI && !col.documentURI.startsWith('file://')
+                ? `<div class="detail-row" style="border:none;"><span class="detail-label">Proof Document</span><span class="detail-value"><a href="${col.documentURI}" target="_blank" rel="noopener noreferrer" style="color:var(--cyan);font-size:11px;"><i class="fa-solid fa-file-arrow-down"></i> View Document</a></span></div>`
+                : `<div class="detail-row" style="border:none;"><span class="detail-label">Proof</span><span class="detail-value mono" style="font-size:9px;color:var(--text-muted);">Hash stored on-chain — no IPFS link (Pinata not configured)</span></div>`}
 
             ` : `
               <div class="detail-row"><span class="detail-label">Token</span><span class="detail-value mono text-xs">${col.cryptoToken}</span></div>
