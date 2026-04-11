@@ -2479,3 +2479,207 @@ html.light .mp-earn-strip { background: rgba(16,185,129,0.04); }
   .mp-earn-item    { padding: 10px 8px; }
   .mp-earn-val     { font-size: 12px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ABOUT US PAGE
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Hero card */
+.about-hero-card {
+  background: linear-gradient(135deg, rgba(56,189,248,0.07) 0%, rgba(129,140,248,0.07) 100%);
+  border: 1px solid rgba(56,189,248,0.18);
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+}
+.about-hero-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.about-logo-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.about-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  letter-spacing: -0.5px;
+}
+.about-tagline {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+.about-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.about-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.about-badge-green {
+  background: rgba(16,185,129,0.12);
+  color: var(--green);
+  border: 1px solid rgba(16,185,129,0.25);
+}
+.about-badge-cyan {
+  background: rgba(6,182,212,0.10);
+  color: var(--cyan);
+  border: 1px solid rgba(6,182,212,0.22);
+}
+.about-badge-purple {
+  background: rgba(129,140,248,0.10);
+  color: #818cf8;
+  border: 1px solid rgba(129,140,248,0.22);
+}
+
+/* Grid layout */
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* Individual cards */
+.about-card {
+  position: relative;
+  overflow: visible;
+}
+.about-card-icon {
+  font-size: 22px;
+  margin-bottom: 14px;
+}
+.about-section-heading {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 14px;
+}
+.about-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+.about-text:last-child { margin-bottom: 0; }
+
+/* Lists */
+.about-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.about-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.about-list li i {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+/* Warning box */
+.about-warning-box {
+  background: rgba(245,158,11,0.07);
+  border: 1px solid rgba(245,158,11,0.22);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.about-warning-box .about-text { color: var(--text-primary); font-size: 13.5px; }
+
+/* Disclaimer box */
+.about-disclaimer-box {
+  background: rgba(245,158,11,0.05);
+  border: 1px solid rgba(245,158,11,0.15);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+/* Tech grid */
+.about-tech-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+.about-tech-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 14px;
+  text-align: center;
+  transition: border-color var(--transition), transform var(--transition);
+}
+.about-tech-item:hover {
+  border-color: var(--cyan);
+  transform: translateY(-2px);
+}
+.about-tech-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+.about-tech-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.about-tech-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* Light theme overrides */
+html.light .about-hero-card {
+  background: linear-gradient(135deg, rgba(2,132,199,0.05) 0%, rgba(99,102,241,0.05) 100%);
+  border-color: rgba(2,132,199,0.20);
+}
+html.light .about-tech-item {
+  background: #f8fafc;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+  .about-tech-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .about-hero-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .about-hero-card {
+    padding: 20px 18px;
+  }
+  .about-tech-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .about-title { font-size: 22px; }
+}

@@ -217,7 +217,28 @@ app.get('/', (c) => {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DaatFI — Decentralized Lending Platform</title>
-  <meta name="description" content="Global decentralized lending on Arc Testnet. Hybrid RWA + crypto collateral, USDC payments, AI-powered agent." />
+  <meta name="description" content="Testnet-only DeFi lending platform on Arc Network. No real funds, no financial risk. Built for testing and development." />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="DaatFI — Testnet DeFi Lending on Arc Network" />
+  <meta property="og:description" content="Experimental DeFi lending dApp on Arc Network testnet. No real assets involved. Non-custodial architecture for testing and development." />
+  <meta property="og:type" content="website" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "DAATFi",
+    "description": "Experimental DeFi lending dApp running on Arc Network testnet. No real funds or financial risk involved.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
@@ -379,6 +400,9 @@ app.get('/', (c) => {
     </button>
     <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
       <i class="fa-solid fa-gear"></i> Settings
+    </button>
+    <button class="nav-btn" data-page="about" onclick="showPage('about')">
+      <i class="fa-solid fa-circle-info"></i> About Us
     </button>
   </nav>
 
@@ -1728,6 +1752,155 @@ app.get('/', (c) => {
       </div>
     </div>
   </div>
+
+  <!-- ════ ABOUT US PAGE ════ -->
+  <div class="page" id="page-about">
+    <div class="section-title"><i class="fa-solid fa-circle-info text-cyan" style="margin-right:8px;"></i>About Us</div>
+    <div class="section-sub">Learn about the DaatFI platform, its purpose, and transparency commitments.</div>
+
+    <!-- Mission Card -->
+    <div class="about-hero-card">
+      <div class="about-hero-inner">
+        <div class="about-logo-block">
+          <div class="logo-icon" style="width:56px;height:56px;font-size:26px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><defs><linearGradient id="about-lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#818cf8"/></linearGradient></defs><path d="M4 4 L4 20 L12 20 C17.523 20 22 16.418 22 12 C22 7.582 17.523 4 12 4 Z" fill="none" stroke="url(#about-lg)" stroke-width="2.2" stroke-linejoin="round"/><path d="M7.5 8 L7.5 16 L11.5 16 C14.538 16 17 14.209 17 12 C17 9.791 14.538 8 11.5 8 Z" fill="url(#about-lg)" opacity="0.3"/></svg>
+          </div>
+          <div>
+            <h1 class="about-title">Daat<span class="logo-fi">FI</span></h1>
+            <p class="about-tagline">Experimental DeFi Application · Arc Network Testnet</p>
+          </div>
+        </div>
+        <div class="about-badges">
+          <span class="about-badge about-badge-green"><i class="fa-solid fa-flask"></i> Testnet Only</span>
+          <span class="about-badge about-badge-cyan"><i class="fa-solid fa-lock"></i> Non-Custodial</span>
+          <span class="about-badge about-badge-purple"><i class="fa-solid fa-shield-halved"></i> No Real Funds</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-grid">
+
+      <!-- Who We Are -->
+      <div class="card card-lg about-card">
+        <div class="about-card-icon"><i class="fa-solid fa-user-tie text-cyan"></i></div>
+        <h2 class="about-section-heading">About This Platform</h2>
+        <p class="about-text">
+          DaatFI is a <strong>testnet lending protocol</strong> built by an independent developer
+          using the <strong>Arc Network</strong>. It was developed using Genspark with a strong
+          focus on security, performance, and reliability.
+        </p>
+        <p class="about-text">
+          The purpose of this <strong>experimental DeFi application</strong> is strictly for
+          testing and experimental use only. The platform operates exclusively on the
+          <strong>Arc Network testnet</strong> (Chain ID: 5042002).
+        </p>
+        <p class="about-text">
+          This dApp demonstrates hybrid collateral lending — combining Real-World Assets (RWA)
+          and crypto escrow — in a safe, sandboxed environment. The system includes protections
+          against common vulnerabilities, exploits, and malicious interactions.
+        </p>
+      </div>
+
+      <!-- Testnet Context -->
+      <div class="card card-lg about-card">
+        <div class="about-card-icon"><i class="fa-solid fa-triangle-exclamation text-amber"></i></div>
+        <h2 class="about-section-heading">Testnet Environment</h2>
+        <div class="about-warning-box">
+          <p class="about-text" style="margin:0;">
+            <strong>Important:</strong> This platform operates exclusively on a testnet.
+            <strong>No real assets are involved.</strong>
+          </p>
+        </div>
+        <ul class="about-list">
+          <li><i class="fa-solid fa-circle-xmark text-red"></i> Loans, collateral, and repayments shown are <strong>NOT real</strong></li>
+          <li><i class="fa-solid fa-circle-xmark text-red"></i> All assets used are <strong>testnet tokens only</strong></li>
+          <li><i class="fa-solid fa-circle-xmark text-red"></i> <strong>No legal or financial obligation</strong> is created</li>
+          <li><i class="fa-solid fa-circle-xmark text-red"></i> This is a <strong>prototype/demo environment</strong></li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> Keyword: <strong>no real assets involved</strong></li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> Keyword: <strong>non-custodial architecture</strong></li>
+        </ul>
+      </div>
+
+      <!-- Security & Transparency -->
+      <div class="card card-lg about-card">
+        <div class="about-card-icon"><i class="fa-solid fa-shield-halved text-green"></i></div>
+        <h2 class="about-section-heading">Security &amp; Transparency</h2>
+        <ul class="about-list">
+          <li><i class="fa-solid fa-circle-check text-green"></i> <strong>No storage</strong> of sensitive personal data</li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> <strong>No automatic wallet interactions</strong> without explicit user approval</li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> Users retain <strong>full control</strong> over their wallets at all times</li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> Smart contracts are deployed for <strong>testnet purposes only</strong></li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> Platform architecture is <strong>non-custodial</strong></li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> Designed for <strong>testing, education, and development</strong> only</li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> Protected against <strong>XSS, CSRF, and injection attacks</strong></li>
+          <li><i class="fa-solid fa-circle-check text-green"></i> All API endpoints include <strong>rate limiting</strong> and input sanitization</li>
+        </ul>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="card card-lg about-card">
+        <div class="about-card-icon"><i class="fa-solid fa-scale-balanced text-purple"></i></div>
+        <h2 class="about-section-heading">Disclaimer</h2>
+        <div class="about-disclaimer-box">
+          <ul class="about-list" style="margin:0;">
+            <li><i class="fa-solid fa-circle-dot text-amber"></i> This platform <strong>does not provide financial services</strong></li>
+            <li><i class="fa-solid fa-circle-dot text-amber"></i> This is <strong>not an investment platform</strong></li>
+            <li><i class="fa-solid fa-circle-dot text-amber"></i> <strong>No guarantees, returns, or profits</strong> of any kind</li>
+            <li><i class="fa-solid fa-circle-dot text-amber"></i> Use at your own risk — <strong>test environment only</strong></li>
+            <li><i class="fa-solid fa-circle-dot text-amber"></i> No real funds, no real transactions, no real collateral</li>
+            <li><i class="fa-solid fa-circle-dot text-amber"></i> Smart contract interactions occur only on Arc Testnet</li>
+          </ul>
+        </div>
+      </div>
+
+    </div><!-- /about-grid -->
+
+    <!-- Tech Stack Card -->
+    <div class="card card-lg" style="margin-top:24px;">
+      <div class="card-title"><i class="fa-solid fa-microchip text-cyan"></i>Technology Stack</div>
+      <div class="about-tech-grid">
+        <div class="about-tech-item">
+          <div class="about-tech-icon"><i class="fa-brands fa-ethereum text-cyan"></i></div>
+          <div class="about-tech-label">Arc Network</div>
+          <div class="about-tech-desc">EVM-compatible testnet</div>
+        </div>
+        <div class="about-tech-item">
+          <div class="about-tech-icon"><i class="fa-solid fa-file-contract text-purple"></i></div>
+          <div class="about-tech-label">Smart Contracts</div>
+          <div class="about-tech-desc">Solidity · Testnet only</div>
+        </div>
+        <div class="about-tech-item">
+          <div class="about-tech-icon"><i class="fa-solid fa-wallet text-green"></i></div>
+          <div class="about-tech-label">Web3 Integration</div>
+          <div class="about-tech-desc">ethers.js · MetaMask / OKX</div>
+        </div>
+        <div class="about-tech-item">
+          <div class="about-tech-icon"><i class="fa-solid fa-database text-amber"></i></div>
+          <div class="about-tech-label">IPFS Storage</div>
+          <div class="about-tech-desc">Pinata · Document hashing</div>
+        </div>
+        <div class="about-tech-item">
+          <div class="about-tech-icon"><i class="fa-solid fa-cloud text-cyan"></i></div>
+          <div class="about-tech-label">Cloudflare Pages</div>
+          <div class="about-tech-desc">Edge deployment · Global CDN</div>
+        </div>
+        <div class="about-tech-item">
+          <div class="about-tech-icon"><i class="fa-solid fa-robot text-purple"></i></div>
+          <div class="about-tech-label">AI Agent</div>
+          <div class="about-tech-desc">DaatFI AI · Genspark-built</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact / Links -->
+    <div class="card" style="margin-top:24px; padding:20px 24px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-circle-info text-cyan" style="margin-right:6px;"></i>Built on Arc Network Testnet · Chain ID 5042002 · For testing and development only.</span>
+        <span class="about-badge about-badge-green" style="margin-left:auto;"><i class="fa-solid fa-circle"></i> Testnet Active</span>
+      </div>
+    </div>
+
+  </div><!-- /page-about -->
 
 </main>
 

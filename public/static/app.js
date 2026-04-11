@@ -60,6 +60,7 @@ function showPage(pageId) {
   if (pageId === 'home')        loadHomeStats();
   if (pageId === 'settings')    loadSettingsValues();
   if (pageId === 'borrow')      { if (uploadedDocs.length === 0) { uploadedDocs = []; _renderDocSlots(); } }
+  // about page requires no lazy-load
 }
 
 // ══════════════════════════════════════════════════════════════
