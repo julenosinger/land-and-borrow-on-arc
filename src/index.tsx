@@ -1125,7 +1125,7 @@ app.get('/', (c) => {
 
             <!-- Add document button (hidden once 5 docs added) -->
             <button type="button" id="rwa-add-doc-btn" class="bw-add-doc-btn" onclick="addDocSlot()">
-              <i class="fa-solid fa-plus"></i> Add Document
+              <i class="fa-solid fa-plus"></i> Add Proof
             </button>
 
             <span class="bw-field-err" id="rwa-doc-err"></span>
