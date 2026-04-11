@@ -61,8 +61,15 @@ app.use('*', async (c, next) => {
   // Disable referrer leakage
   c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
 
-  // Restrict browser features
-  c.res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()')
+  // Restrict browser features (includes FLoC/Topics opt-out)
+  c.res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()')
+
+  // Block cross-origin access
+  c.res.headers.set('Cross-Origin-Opener-Policy', 'same-origin')
+  c.res.headers.set('Cross-Origin-Resource-Policy', 'same-origin')
+
+  // No Adobe/Flash cross-domain policies
+  c.res.headers.set('X-Permitted-Cross-Domain-Policies', 'none')
 
   // Content-Security-Policy — allows ethers CDN + FontAwesome + Tailwind + same-origin
   c.res.headers.set('Content-Security-Policy', [
@@ -72,6 +79,7 @@ app.use('*', async (c, next) => {
     "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com",
     "img-src 'self' data: https:",
     "connect-src 'self' https://rpc.testnet.arc.network https://api.circle.com https://gateway.pinata.cloud wss: ws:",
+    "frame-src https://gateway.pinata.cloud",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
