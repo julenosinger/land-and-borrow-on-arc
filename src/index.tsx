@@ -1791,20 +1791,8 @@ app.get('/', (c) => {
             </button>
           </div>
 
-          <!-- Search mode toggle -->
-          <div class="nft-search-toggle" id="nft-search-toggle">
-            <button class="nft-stoggle-btn active" id="nft-stoggle-contract"
-                    onclick="nftSetSearchMode('contract')">
-              <i class="fa-solid fa-file-contract"></i> Contract
-            </button>
-            <button class="nft-stoggle-btn" id="nft-stoggle-wallet"
-                    onclick="nftSetSearchMode('wallet')">
-              <i class="fa-solid fa-wallet"></i> Wallet
-            </button>
-          </div>
-
           <div class="form-group" style="margin-bottom:8px;">
-            <label class="form-label" id="nft-search-label">ERC-721 Contract Address</label>
+            <label class="form-label">ERC-721 Contract Address</label>
             <div style="display:flex;gap:10px;">
               <div class="input-group" style="flex:1;">
                 <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -1816,24 +1804,12 @@ app.get('/', (c) => {
                 <i class="fa-solid fa-magnifying-glass"></i> Search
               </button>
             </div>
-            <span class="field-hint" id="nft-search-hint">
-              Enter any ERC-721 contract on Arc Testnet — or use
-              <a href="#" style="color:var(--primary);text-decoration:underline;" onclick="event.preventDefault();document.getElementById('nft-contract-addr').value=window.DAATFI_NFT_ADDRESS||'';nftFetchWalletNFTs();">
+            <span class="field-hint">
+              Your connected wallet's NFTs will be shown. Use
+              <a href="#" style="color:var(--primary);text-decoration:underline;" onclick="event.preventDefault();document.getElementById('nft-contract-addr').value=window.DAATFI_NFT_ADDRESS||'0x3305250a9F401D92483C1030fBEF1DC206f2Cf7b';nftFetchWalletNFTs();">
                 DaatFI NFT (<code style="font-size:11px;">0x3305…Cf7b</code>)
-              </a>
+              </a> or any other ERC-721 on Arc Testnet.
             </span>
-          </div>
-
-          <!-- Wallet mode: extra wallet address field (hidden by default) -->
-          <div class="form-group" id="nft-wallet-addr-row" style="display:none;margin-bottom:0;">
-            <label class="form-label"><i class="fa-solid fa-wallet"></i> Wallet Address</label>
-            <div class="input-group">
-              <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-              <input id="nft-wallet-addr-input" class="form-control mono" type="text"
-                     placeholder="0x… wallet address to search"
-                     onkeydown="if(event.key==='Enter') nftFetchWalletNFTs()" />
-            </div>
-            <span class="field-hint">Enter the wallet address whose NFTs you want to browse in the contract above</span>
           </div>
           <!-- ── Network rule notice ── -->
           <div class="nft-network-rule">

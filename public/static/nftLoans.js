@@ -218,122 +218,9 @@ function _nftImgHtml(image, name, size = 80) {
   return `<div class="nft-img-fallback" style="width:${size}px;height:${size}px;"><i class="fa-solid fa-image"></i></div>`;
 }
 
-// ── Search mode toggle ────────────────────────────────────────────────────────
-// NETWORK RULE: This system operates exclusively on ARC Network (testnet,
-// Chain ID 5042002). Any ERC-721 NFT deployed on Arc Testnet is accepted as
-// collateral. No collection whitelist, no rarity checks, no pricing oracle —
-// the system is intentionally open and testnet-friendly.
-
-/**
- * Switch between 'contract' and 'wallet' search modes.
- * Contract mode: user enters NFT contract; owned tokens of connected wallet are shown.
- * Wallet mode:   user enters NFT contract + any wallet address; shows that wallet's tokens.
- */
-function nftSetSearchMode(mode) {
-  _searchMode = mode === 'wallet' ? 'wallet' : 'contract';
-
-  // Update toggle button active state
-  const btnC = document.getElementById('nft-stoggle-contract');
-  const btnW = document.getElementById('nft-stoggle-wallet');
-  if (btnC) btnC.classList.toggle('active', _searchMode === 'contract');
-  if (btnW) btnW.classList.toggle('active', _searchMode === 'wallet');
-
-  // Show/hide the extra wallet-address row
-  const walletRow = document.getElementById('nft-wallet-addr-row');
-  if (walletRow) walletRow.style.display = _searchMode === 'wallet' ? 'block' : 'none';
-
-  // Update label and hint for the contract input
-  const label = document.getElementById('nft-search-label');
-  const hint  = document.getElementById('nft-search-hint');
-  if (_searchMode === 'wallet') {
-    if (label) label.textContent = 'ERC-721 Contract Address';
-    if (hint)  hint.textContent  = 'Enter the NFT contract address and the wallet address below to browse any wallet\'s NFTs';
-  } else {
-    if (label) label.textContent = 'ERC-721 Contract Address';
-    if (hint)  hint.textContent  = 'Enter any ERC-721 contract deployed on Arc Testnet — your connected wallet\'s NFTs will be shown';
-  }
-
-  // Clear previous results on mode switch
-  const grid    = document.getElementById('nft-wallet-grid');
-  const emptyEl = document.getElementById('nft-wallet-empty');
-  if (grid) grid.innerHTML = '';
-  if (emptyEl) {
-    emptyEl.style.display = 'block';
-    emptyEl.innerHTML = _searchMode === 'wallet'
-      ? '<i class="fa-solid fa-wallet"></i><br>Enter the NFT contract address and a wallet address, then click Search.'
-      : '<i class="fa-solid fa-magnifying-glass"></i><br>Enter an ERC-721 contract address above and click Search.';
-  }
-}
-
-/**
- * Search NFTs owned by a specific wallet in a specific NFT contract.
- * Direct approach: balanceOf + tokensOfOwner/tokenOfOwnerByIndex.
- */
-async function nftSearchByWallet(nftContractAddr, walletAddr) {
-  const container = document.getElementById('nft-wallet-grid');
-  const emptyEl   = document.getElementById('nft-wallet-empty');
-  const loadEl    = document.getElementById('nft-wallet-loading');
-
-  if (loadEl) { loadEl.style.display = 'flex'; loadEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning wallet…'; }
-  if (emptyEl) emptyEl.style.display = 'none';
-  if (container) container.innerHTML = '';
-
-  try {
-    const provider = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
-    const nft = new ethers.Contract(nftContractAddr, window.ERC721_ABI, provider);
-
-    let bal;
-    try {
-      bal = await nft.balanceOf(walletAddr);
-    } catch(e) {
-      throw new Error('Contract does not respond to balanceOf. Make sure it is a valid ERC-721 on Arc Testnet.');
-    }
-
-    const count = Math.min(Number(bal), 50);
-    if (loadEl) loadEl.style.display = 'none';
-
-    if (count === 0) {
-      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>This wallet holds no NFTs in the specified contract.'; }
-      return;
-    }
-
-    let tokenIds = [];
-    try {
-      const tids = await nft.tokensOfOwner(walletAddr);
-      tokenIds = tids.map(t => t.toString());
-    } catch {
-      for (let i = 0; i < count; i++) {
-        try { tokenIds.push((await nft.tokenOfOwnerByIndex(walletAddr, i)).toString()); } catch {}
-      }
-    }
-
-    if (tokenIds.length === 0) {
-      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>Could not enumerate token IDs. The contract may not implement ERC-721 Enumerable.'; }
-      return;
-    }
-
-    for (const tokenId of tokenIds) {
-      const meta = await _fetchNFTMeta(nftContractAddr, tokenId, provider);
-      const card = document.createElement('div');
-      card.className = 'nft-card' + (_selectedNFT?.tokenId === tokenId && _selectedNFT?.address === nftContractAddr ? ' nft-card-selected' : '');
-      card.dataset.addr = nftContractAddr; card.dataset.tokenId = tokenId;
-      card.innerHTML = `
-        <div class="nft-card-img">${_nftImgHtml(meta.image, meta.name, 120)}</div>
-        <div class="nft-card-body">
-          <div class="nft-card-name">${meta.name}</div>
-          <div class="nft-card-coll">${meta.collection}</div>
-          <div class="nft-card-id">Token #${tokenId}</div>
-        </div>
-        <div class="nft-card-select-overlay"><i class="fa-solid fa-circle-check"></i></div>`;
-      card.addEventListener('click', () => nftSelectNFT(nftContractAddr, tokenId, meta));
-      if (container) container.appendChild(card);
-    }
-
-  } catch(e) {
-    if (loadEl) loadEl.style.display = 'none';
-    if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><br><strong>Error:</strong> ${e.message}`; }
-  }
-}
+// ── Search mode toggle (kept for backward compat — no-op stubs) ──────────────
+// The UI now has a single contract-address field; wallet is always the connected wallet.
+function nftSetSearchMode() {} // no-op — toggle removed from UI
 
 async function nftFetchWalletNFTs() {
   const container = document.getElementById('nft-wallet-grid');
@@ -341,9 +228,20 @@ async function nftFetchWalletNFTs() {
   const loadEl    = document.getElementById('nft-wallet-loading');
   if (!container) return;
 
-  // ── Input validation ──────────────────────────────────────────────────────
-  const rawInput = document.getElementById('nft-contract-addr')?.value?.trim();
+  // ── Wallet check ──────────────────────────────────────────────────────────
+  if (!window.web3 || !window.web3.address) {
+    if (loadEl) loadEl.style.display = 'none';
+    if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-wallet"></i><br>Connect your wallet to see your NFTs.'; }
+    return;
+  }
 
+  // ── Input validation — auto-fill DaatFI NFT if field is empty ────────────
+  const inputEl  = document.getElementById('nft-contract-addr');
+  let   rawInput = inputEl?.value?.trim();
+  if (!rawInput && window.DAATFI_NFT_ADDRESS) {
+    rawInput = window.DAATFI_NFT_ADDRESS;
+    if (inputEl) inputEl.value = rawInput;
+  }
   if (!rawInput || !ethers.utils.isAddress(rawInput)) {
     if (loadEl) loadEl.style.display = 'none';
     if (emptyEl) {
@@ -353,28 +251,8 @@ async function nftFetchWalletNFTs() {
     return;
   }
 
-  // ── Wallet mode: uses contract address + explicit wallet address ──────────
-  if (_searchMode === 'wallet') {
-    const walletInput = document.getElementById('nft-wallet-addr-input')?.value?.trim();
-    if (!walletInput || !ethers.utils.isAddress(walletInput)) {
-      if (emptyEl) {
-        emptyEl.style.display = 'block';
-        emptyEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><br>Please enter a valid wallet address in the "Wallet Address" field.';
-      }
-      return;
-    }
-    return nftSearchByWallet(rawInput, walletInput);
-  }
-
-  // ── Contract mode: original logic (unchanged) ─────────────────────────────
-  if (!window.web3 || !window.web3.address) {
-    if (loadEl) loadEl.style.display = 'none';
-    if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-wallet"></i><br>Connect your wallet to see your NFTs.'; }
-    return;
-  }
-
-  if (loadEl)    { loadEl.style.display = 'flex'; loadEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning wallet…'; }
-  if (emptyEl)   emptyEl.style.display  = 'none';
+  if (loadEl)  { loadEl.style.display = 'flex'; loadEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning wallet…'; }
+  if (emptyEl) emptyEl.style.display = 'none';
   container.innerHTML = '';
 
   const nftContractAddr = rawInput;
@@ -905,11 +783,26 @@ function nftLoansInit() {
   _initNFTContracts();
   nftLoadMyLoans();
 
-  // Re-init signer if wallet connects after page load
+  // Pre-fill the DaatFI NFT contract address automatically
+  const inputEl = document.getElementById('nft-contract-addr');
+  if (inputEl && !inputEl.value && window.DAATFI_NFT_ADDRESS) {
+    inputEl.value = window.DAATFI_NFT_ADDRESS;
+  }
+
+  // If wallet already connected on init, auto-search
+  if (window.web3 && window.web3.address) {
+    nftFetchWalletNFTs();
+  }
+
+  // Re-init signer and auto-search when wallet connects after page load
   if (window.web3) {
     window.web3.on('connected', () => {
       _nftContract = new ethers.Contract(window.NFT_LOAN_ADDRESS, window.NFT_LOAN_ABI, window.web3.signer);
       nftLoadMyLoans();
+      // Auto-fill and search when wallet connects
+      const inp = document.getElementById('nft-contract-addr');
+      if (inp && !inp.value && window.DAATFI_NFT_ADDRESS) inp.value = window.DAATFI_NFT_ADDRESS;
+      nftFetchWalletNFTs();
     });
   }
 }
@@ -919,7 +812,6 @@ window.nftLoansInit          = nftLoansInit;
 window.nftMintDaatFI         = nftMintDaatFI;
 window.nftFetchWalletNFTs    = nftFetchWalletNFTs;
 window.nftSetSearchMode      = nftSetSearchMode;
-window.nftSearchByWallet     = nftSearchByWallet;
 window.nftSelectNFT          = nftSelectNFT;
 window.nftSubmitLoanRequest  = nftSubmitLoanRequest;
 window.nftExecuteLoanRequest = nftExecuteLoanRequest;
