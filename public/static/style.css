@@ -3216,3 +3216,51 @@ html.light .about-tech-item {
   .rep-score-num { font-size: 18px; }
   .rep-legend    { gap: 6px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   NFT LOANS — SEARCH MODE TOGGLE
+   ═══════════════════════════════════════════════════════════════ */
+
+.nft-search-toggle {
+  display: inline-flex;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 14px;
+}
+
+.nft-stoggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.nft-stoggle-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.nft-stoggle-btn.active {
+  background: var(--bg-secondary);
+  color: var(--cyan);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+.nft-stoggle-btn i { font-size: 12px; }
+
+html.light .nft-stoggle-btn.active {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
