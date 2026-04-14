@@ -194,7 +194,8 @@ function _nftImgHtml(image, name, size = 80) {
 
 /**
  * Switch between 'contract' and 'wallet' search modes.
- * Updates toggle button states and label/hint text — no search is triggered.
+ * Contract mode: user enters NFT contract; owned tokens of connected wallet are shown.
+ * Wallet mode:   user enters NFT contract + any wallet address; shows that wallet's tokens.
  */
 function nftSetSearchMode(mode) {
   _searchMode = mode === 'wallet' ? 'wallet' : 'contract';
@@ -205,15 +206,19 @@ function nftSetSearchMode(mode) {
   if (btnC) btnC.classList.toggle('active', _searchMode === 'contract');
   if (btnW) btnW.classList.toggle('active', _searchMode === 'wallet');
 
-  // Update label and hint
+  // Show/hide the extra wallet-address row
+  const walletRow = document.getElementById('nft-wallet-addr-row');
+  if (walletRow) walletRow.style.display = _searchMode === 'wallet' ? 'block' : 'none';
+
+  // Update label and hint for the contract input
   const label = document.getElementById('nft-search-label');
   const hint  = document.getElementById('nft-search-hint');
   if (_searchMode === 'wallet') {
-    if (label) label.textContent = 'Wallet Address';
-    if (hint)  hint.textContent  = 'Enter a wallet address to browse all its ERC-721 NFTs across known collections';
+    if (label) label.textContent = 'ERC-721 Contract Address';
+    if (hint)  hint.textContent  = 'Enter the NFT contract address and the wallet address below to browse any wallet\'s NFTs';
   } else {
     if (label) label.textContent = 'ERC-721 Contract Address';
-    if (hint)  hint.textContent  = 'Enter any ERC-721 contract deployed on Arc Testnet';
+    if (hint)  hint.textContent  = 'Enter any ERC-721 contract deployed on Arc Testnet — your connected wallet\'s NFTs will be shown';
   }
 
   // Clear previous results on mode switch
@@ -223,132 +228,101 @@ function nftSetSearchMode(mode) {
   if (emptyEl) {
     emptyEl.style.display = 'block';
     emptyEl.innerHTML = _searchMode === 'wallet'
-      ? '<i class="fa-solid fa-wallet"></i><br>Enter a wallet address above and click Search.'
-      : '<i class="fa-solid fa-magnifying-glass"></i><br>Enter a contract or wallet address above and click Search.';
+      ? '<i class="fa-solid fa-wallet"></i><br>Enter the NFT contract address and a wallet address, then click Search.'
+      : '<i class="fa-solid fa-magnifying-glass"></i><br>Enter an ERC-721 contract address above and click Search.';
   }
 }
 
 /**
- * Search all NFTs owned by a wallet address across multiple ERC-721 events.
- * Uses Transfer event logs to discover contracts the wallet has interacted with,
- * then checks current balance for each unique contract found.
- * Called automatically by nftFetchWalletNFTs() when mode === 'wallet'.
+ * Search NFTs owned by a specific wallet in a specific NFT contract.
+ * Direct approach: uses balanceOf + tokensOfOwner/tokenOfOwnerByIndex.
+ * No eth_getLogs dependency — works with Arc Testnet RPC limitations.
  */
-async function nftSearchByWallet(walletAddr) {
+async function nftSearchByWallet(nftContractAddr, walletAddr) {
   const container = document.getElementById('nft-wallet-grid');
   const emptyEl   = document.getElementById('nft-wallet-empty');
   const loadEl    = document.getElementById('nft-wallet-loading');
 
-  if (loadEl) loadEl.style.display = 'flex';
+  if (loadEl) { loadEl.style.display = 'flex'; loadEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning wallet…'; }
   if (emptyEl) emptyEl.style.display = 'none';
   if (container) container.innerHTML = '';
 
   try {
     const provider = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    const nft = new ethers.Contract(nftContractAddr, window.ERC721_ABI, provider);
 
-    // ── Discover NFT contracts the wallet has interacted with ─────────────────
-    // ERC-721 Transfer topic: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-    const transferTopic = ethers.utils.id('Transfer(address,address,uint256)');
-    const paddedAddr    = ethers.utils.hexZeroPad(walletAddr.toLowerCase(), 32);
-
-    let contractsFound = new Set();
-
-    // Logs where wallet is the RECEIVER (to = walletAddr)
+    // Step 1: get balance
+    let bal;
     try {
-      const logsIn = await provider.getLogs({
-        fromBlock: 0,
-        toBlock:   'latest',
-        topics:    [transferTopic, null, paddedAddr]
-      });
-      logsIn.forEach(l => contractsFound.add(l.address.toLowerCase()));
-    } catch { /* RPC may not support full range — continue */ }
+      bal = await nft.balanceOf(walletAddr);
+    } catch(e) {
+      throw new Error('Contract does not respond to balanceOf. Make sure it is a valid ERC-721 on Arc Testnet.');
+    }
 
-    // Logs where wallet is the SENDER (from = walletAddr) — to catch any past ownership
-    try {
-      const logsOut = await provider.getLogs({
-        fromBlock: 0,
-        toBlock:   'latest',
-        topics:    [transferTopic, paddedAddr]
-      });
-      logsOut.forEach(l => contractsFound.add(l.address.toLowerCase()));
-    } catch {}
+    const count = Math.min(Number(bal), 50);
 
     if (loadEl) loadEl.style.display = 'none';
 
-    if (contractsFound.size === 0) {
+    if (count === 0) {
       if (emptyEl) {
         emptyEl.style.display = 'block';
-        emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>No NFT activity found for this wallet on Arc Testnet.';
+        emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>This wallet holds no NFTs in the specified contract.';
       }
       return;
     }
 
-    // ── For each discovered contract, check current balance ───────────────────
-    let totalRendered = 0;
+    let tokenIds = [];
 
-    for (const contractAddr of contractsFound) {
-      try {
-        const nft = new ethers.Contract(contractAddr, window.ERC721_ABI, provider);
-
-        // Verify it responds to balanceOf (basic ERC-721 check)
-        let bal;
-        try { bal = await nft.balanceOf(walletAddr); } catch { continue; }
-        const count = Math.min(Number(bal), 50);
-        if (count === 0) continue;
-
-        let tokenIds = [];
-
-        // Try tokensOfOwner first (batch call)
+    // Try tokensOfOwner first (ERC-721 Enumerable extension, batch)
+    try {
+      const tids = await nft.tokensOfOwner(walletAddr);
+      tokenIds = tids.map(t => t.toString());
+    } catch {
+      // Fallback: tokenOfOwnerByIndex enumeration (standard ERC-721 Enumerable)
+      for (let i = 0; i < count; i++) {
         try {
-          const tids = await nft.tokensOfOwner(walletAddr);
-          tokenIds = tids.map(t => t.toString());
-        } catch {
-          // Fallback: tokenOfOwnerByIndex enumeration
-          for (let i = 0; i < count; i++) {
-            try {
-              const tid = await nft.tokenOfOwnerByIndex(walletAddr, i);
-              tokenIds.push(tid.toString());
-            } catch {}
-          }
-        }
-
-        // Render cards for this contract
-        for (const tokenId of tokenIds) {
-          const meta = await _fetchNFTMeta(contractAddr, tokenId, provider);
-          const card = document.createElement('div');
-          card.className = 'nft-card' + (
-            _selectedNFT?.tokenId === tokenId && _selectedNFT?.address === contractAddr
-              ? ' nft-card-selected' : ''
-          );
-          card.dataset.addr    = contractAddr;
-          card.dataset.tokenId = tokenId;
-          card.innerHTML = `
-            <div class="nft-card-img">${_nftImgHtml(meta.image, meta.name, 120)}</div>
-            <div class="nft-card-body">
-              <div class="nft-card-name">${meta.name}</div>
-              <div class="nft-card-coll">${meta.collection}</div>
-              <div class="nft-card-id">Token #${tokenId}</div>
-            </div>
-            <div class="nft-card-select-overlay"><i class="fa-solid fa-circle-check"></i></div>
-          `;
-          card.addEventListener('click', () => nftSelectNFT(contractAddr, tokenId, meta));
-          if (container) container.appendChild(card);
-          totalRendered++;
-        }
-
-      } catch { /* skip unresponsive contracts silently */ }
+          const tid = await nft.tokenOfOwnerByIndex(walletAddr, i);
+          tokenIds.push(tid.toString());
+        } catch {}
+      }
     }
 
-    if (totalRendered === 0 && emptyEl) {
-      emptyEl.style.display = 'block';
-      emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>No NFTs currently held by this wallet on Arc Testnet.';
+    if (tokenIds.length === 0) {
+      if (emptyEl) {
+        emptyEl.style.display = 'block';
+        emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>Could not enumerate token IDs. Contract may not implement ERC-721 Enumerable.';
+      }
+      return;
+    }
+
+    // Render cards
+    for (const tokenId of tokenIds) {
+      const meta = await _fetchNFTMeta(nftContractAddr, tokenId, provider);
+      const card = document.createElement('div');
+      card.className = 'nft-card' + (
+        _selectedNFT?.tokenId === tokenId && _selectedNFT?.address === nftContractAddr
+          ? ' nft-card-selected' : ''
+      );
+      card.dataset.addr    = nftContractAddr;
+      card.dataset.tokenId = tokenId;
+      card.innerHTML = `
+        <div class="nft-card-img">${_nftImgHtml(meta.image, meta.name, 120)}</div>
+        <div class="nft-card-body">
+          <div class="nft-card-name">${meta.name}</div>
+          <div class="nft-card-coll">${meta.collection}</div>
+          <div class="nft-card-id">Token #${tokenId}</div>
+        </div>
+        <div class="nft-card-select-overlay"><i class="fa-solid fa-circle-check"></i></div>
+      `;
+      card.addEventListener('click', () => nftSelectNFT(nftContractAddr, tokenId, meta));
+      if (container) container.appendChild(card);
     }
 
   } catch(e) {
     if (loadEl) loadEl.style.display = 'none';
     if (emptyEl) {
       emptyEl.style.display = 'block';
-      emptyEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><br>Error: ${e.message}`;
+      emptyEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><br><strong>Error:</strong> ${e.message}`;
     }
   }
 }
@@ -359,21 +333,29 @@ async function nftFetchWalletNFTs() {
   const loadEl    = document.getElementById('nft-wallet-loading');
   if (!container) return;
 
-  // ── Input validation (shared for both modes) ─────────────────────────────
+  // ── Input validation ──────────────────────────────────────────────────────
   const rawInput = document.getElementById('nft-contract-addr')?.value?.trim();
 
   if (!rawInput || !ethers.utils.isAddress(rawInput)) {
     if (loadEl) loadEl.style.display = 'none';
     if (emptyEl) {
       emptyEl.style.display = 'block';
-      emptyEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><br>Please enter a valid Ethereum address (0x…).';
+      emptyEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><br>Please enter a valid ERC-721 contract address (0x…).';
     }
     return;
   }
 
-  // ── Wallet mode: route to nftSearchByWallet ───────────────────────────────
+  // ── Wallet mode: uses contract address + explicit wallet address ──────────
   if (_searchMode === 'wallet') {
-    return nftSearchByWallet(rawInput);
+    const walletInput = document.getElementById('nft-wallet-addr-input')?.value?.trim();
+    if (!walletInput || !ethers.utils.isAddress(walletInput)) {
+      if (emptyEl) {
+        emptyEl.style.display = 'block';
+        emptyEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><br>Please enter a valid wallet address in the "Wallet Address" field.';
+      }
+      return;
+    }
+    return nftSearchByWallet(rawInput, walletInput);
   }
 
   // ── Contract mode: original logic (unchanged) ─────────────────────────────
@@ -383,7 +365,7 @@ async function nftFetchWalletNFTs() {
     return;
   }
 
-  if (loadEl)    loadEl.style.display   = 'flex';
+  if (loadEl)    { loadEl.style.display = 'flex'; loadEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning wallet…'; }
   if (emptyEl)   emptyEl.style.display  = 'none';
   container.innerHTML = '';
 
@@ -395,6 +377,22 @@ async function nftFetchWalletNFTs() {
     const provider = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
     const nft = new ethers.Contract(nftContractAddr, window.ERC721_ABI, provider);
 
+    // First verify the contract responds to balanceOf
+    let bal;
+    try {
+      bal = await nft.balanceOf(addr);
+    } catch(e) {
+      throw new Error('Contract does not respond to balanceOf. Make sure it is a valid ERC-721 on Arc Testnet.');
+    }
+
+    const count = Math.min(Number(bal), 50);
+
+    if (count === 0) {
+      if (loadEl) loadEl.style.display = 'none';
+      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>Your wallet holds no NFTs in this contract. Make sure you have minted or received an NFT from this contract.'; }
+      return;
+    }
+
     let tokenIds = [];
 
     // Try tokensOfOwner first
@@ -402,23 +400,19 @@ async function nftFetchWalletNFTs() {
       const tids = await nft.tokensOfOwner(addr);
       tokenIds = tids.map(t => t.toString());
     } catch {
-      // Fallback: use balanceOf + tokenOfOwnerByIndex
-      try {
-        const bal = await nft.balanceOf(addr);
-        const count = Math.min(Number(bal), 50); // cap at 50
-        for (let i = 0; i < count; i++) {
-          try {
-            const tid = await nft.tokenOfOwnerByIndex(addr, i);
-            tokenIds.push(tid.toString());
-          } catch {}
-        }
-      } catch {}
+      // Fallback: use tokenOfOwnerByIndex (standard ERC-721 Enumerable)
+      for (let i = 0; i < count; i++) {
+        try {
+          const tid = await nft.tokenOfOwnerByIndex(addr, i);
+          tokenIds.push(tid.toString());
+        } catch {}
+      }
     }
 
     if (loadEl) loadEl.style.display = 'none';
 
     if (tokenIds.length === 0) {
-      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>No NFTs found for this contract in your wallet.'; }
+      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>Your wallet holds no NFTs in this contract. Make sure you have minted or received an NFT from this contract.'; }
       return;
     }
 

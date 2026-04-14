@@ -1795,20 +1795,32 @@ app.get('/', (c) => {
             </button>
           </div>
 
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group" style="margin-bottom:8px;">
             <label class="form-label" id="nft-search-label">ERC-721 Contract Address</label>
             <div style="display:flex;gap:10px;">
               <div class="input-group" style="flex:1;">
                 <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 <input id="nft-contract-addr" class="form-control mono" type="text"
-                       placeholder="Search by contract or wallet address"
+                       placeholder="0x… NFT contract address"
                        onkeydown="if(event.key==='Enter') nftFetchWalletNFTs()" />
               </div>
               <button class="btn btn-primary" style="white-space:nowrap;" onclick="nftFetchWalletNFTs()">
                 <i class="fa-solid fa-magnifying-glass"></i> Search
               </button>
             </div>
-            <span class="field-hint" id="nft-search-hint">Enter any ERC-721 contract deployed on Arc Testnet</span>
+            <span class="field-hint" id="nft-search-hint">Enter any ERC-721 contract deployed on Arc Testnet — your connected wallet's NFTs will be shown</span>
+          </div>
+
+          <!-- Wallet mode: extra wallet address field (hidden by default) -->
+          <div class="form-group" id="nft-wallet-addr-row" style="display:none;margin-bottom:0;">
+            <label class="form-label"><i class="fa-solid fa-wallet"></i> Wallet Address</label>
+            <div class="input-group">
+              <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+              <input id="nft-wallet-addr-input" class="form-control mono" type="text"
+                     placeholder="0x… wallet address to search"
+                     onkeydown="if(event.key==='Enter') nftFetchWalletNFTs()" />
+            </div>
+            <span class="field-hint">Enter the wallet address whose NFTs you want to browse in the contract above</span>
           </div>
           <!-- ── Network rule notice ── -->
           <div class="nft-network-rule">
@@ -1824,7 +1836,7 @@ app.get('/', (c) => {
             <i class="fa-solid fa-spinner fa-spin"></i> Scanning wallet…
           </div>
           <div id="nft-wallet-empty" class="nft-wallet-empty">
-            <i class="fa-solid fa-magnifying-glass"></i><br>Enter a contract or wallet address above and click Search.
+            <i class="fa-solid fa-magnifying-glass"></i><br>Enter an ERC-721 contract address above and click Search.
           </div>
           <div id="nft-wallet-grid" class="nft-wallet-grid"></div>
         </div>
