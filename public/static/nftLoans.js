@@ -120,7 +120,10 @@ async function nftMintDaatFI() {
 // ── Initialize contracts ──────────────────────────────────────────────────────
 function _initNFTContracts() {
   try {
-    const prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    // Use the already-connected Web3Provider when available; fall back to JsonRpc for read-only
+    const prov = (window.web3 && window.web3.provider)
+      ? window.web3.provider
+      : new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
     _nftReadOnly = new ethers.Contract(window.NFT_LOAN_ADDRESS, window.NFT_LOAN_ABI, prov);
     if (window.web3 && window.web3.signer) {
       _nftContract = new ethers.Contract(window.NFT_LOAN_ADDRESS, window.NFT_LOAN_ABI, window.web3.signer);
@@ -164,7 +167,9 @@ async function _fetchNFTMeta(nftAddr, tokenId, provider) {
   const key = `${nftAddr}:${tokenId}`;
   if (_nftCache[key]) return _nftCache[key];
   try {
-    const nft = new ethers.Contract(nftAddr, window.ERC721_ABI, provider);
+    // Use passed provider, then window.web3.provider, then JsonRpcProvider as last resort
+    let prov = provider || (window.web3 && window.web3.provider) || new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    const nft = new ethers.Contract(nftAddr, window.ERC721_ABI, prov);
     let collectionName = 'Unknown Collection';
     let tokenName      = `Token #${tokenId}`;
     let image          = null;
@@ -259,14 +264,16 @@ async function nftFetchWalletNFTs() {
   const addr            = window.web3.address;
 
   try {
-    const provider = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    // Use the already-connected Web3Provider from the wallet — no new provider needed.
+    const provider = window.web3.provider;
     const nft = new ethers.Contract(nftContractAddr, window.ERC721_ABI, provider);
 
     let bal;
     try {
       bal = await nft.balanceOf(addr);
     } catch(e) {
-      throw new Error('Contract does not respond to balanceOf. Make sure it is a valid ERC-721 on Arc Testnet.');
+      console.error('[NFT balanceOf error]', e);
+      throw new Error('balanceOf failed: ' + (e.reason || e.message || String(e)));
     }
 
     const count = Math.min(Number(bal), 50);
