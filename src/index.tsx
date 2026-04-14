@@ -1768,12 +1768,6 @@ app.get('/', (c) => {
       <a href="https://testnet.arcscan.app/address/0x0bAF758cc03C0d3fBe0e0C9b7342777282c76ee8" target="_blank" class="nft-banner-link"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
     </div>
 
-    <!-- Reputation score widget -->
-    <div id="nft-reputation-widget" class="nft-rep-placeholder">
-      <i class="fa-solid fa-star"></i>
-      <span>Connect wallet to see your Reputation Score</span>
-    </div>
-
     <div class="nft-page-grid">
 
       <!-- LEFT: NFT Selector + Loan Form -->

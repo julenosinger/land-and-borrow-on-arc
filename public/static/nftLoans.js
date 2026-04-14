@@ -12,7 +12,6 @@ let _selectedNFT   = null;   // { address, tokenId, name, collection, image }
 let _myNftLoans    = [];     // cached borrower loans
 let _countdownMap  = {};     // loanId => intervalId
 let _nftCache      = {};     // address+tokenId => metadata
-let _reputationScore = null; // cached score for connected wallet (null = not loaded)
 let _searchMode    = 'contract'; // 'contract' | 'wallet'  — toggle state
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -56,61 +55,6 @@ function _nftToast(msg, type = 'info') {
 function _nftShowModal(html) {
   if (!window.showModal) { alert('Modal unavailable'); return; }
   window.showModal({ html, size: 'md' });
-}
-
-// ── Reputation helpers ────────────────────────────────────────────────────────
-function _repTier(score) {
-  if (score >= 80) return { label: 'Good',   cls: 'rep-good',   icon: '✅' };
-  if (score >= 50) return { label: 'Medium', cls: 'rep-medium', icon: '⚠️' };
-  return              { label: 'Risky',  cls: 'rep-risky',  icon: '🚫' };
-}
-
-async function _fetchReputation(addr) {
-  try {
-    const c = _getReadOnlyNFT();
-    if (!c) return 100;
-    const raw = await c.reputationScore(addr);
-    return Number(raw);
-  } catch { return 100; }
-}
-
-async function _renderReputationWidget(addr) {
-  const el = document.getElementById('nft-reputation-widget');
-  if (!el) return;
-
-  el.innerHTML = '<span class="rep-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading score…</span>';
-
-  const score = await _fetchReputation(addr);
-  _reputationScore = score;
-
-  const tier  = _repTier(score);
-  const pct   = score; // 0–100 maps directly to 0–100%
-  const color = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-
-  el.innerHTML = `
-    <div class="rep-widget">
-      <div class="rep-header">
-        <span class="rep-title"><i class="fa-solid fa-star"></i> Reputation Score</span>
-        <span class="rep-badge ${tier.cls}">${tier.icon} ${tier.label}</span>
-      </div>
-      <div class="rep-bar-wrap">
-        <div class="rep-bar-track">
-          <div class="rep-bar-fill" style="width:${pct}%;background:${color};"></div>
-        </div>
-        <span class="rep-score-num" style="color:${color};">${score}<span style="font-size:12px;color:var(--text-muted);">/100</span></span>
-      </div>
-      <div class="rep-legend">
-        <span class="rep-legend-item rep-good">80–100 Good</span>
-        <span class="rep-legend-item rep-medium">50–79 Medium</span>
-        <span class="rep-legend-item rep-risky">0–49 Risky</span>
-      </div>
-      ${score < 50 ? `
-      <div class="rep-blocked-msg">
-        <i class="fa-solid fa-ban"></i>
-        Your reputation score is too low to request new loans.
-      </div>` : ''}
-    </div>
-  `;
 }
 
 // ── Initialize contracts ──────────────────────────────────────────────────────
@@ -498,40 +442,8 @@ function _nftUpdateLoanPreview() {
 async function nftSubmitLoanRequest() {
   if (!_selectedNFT) { _nftToast('Select an NFT first.', 'warning'); return; }
 
-  // ── Reputation gate (frontend mirror of contract check) ──────────────────
   if (!window.web3 || !window.web3.address) {
     _nftToast('Connect your wallet first.', 'warning'); return;
-  }
-  const score = _reputationScore !== null
-    ? _reputationScore
-    : await _fetchReputation(window.web3.address);
-  _reputationScore = score;
-
-  if (score < 50) {
-    _nftToast('Your reputation score is too low to request new loans.', 'error');
-    _nftShowModal(`
-      <div style="text-align:center;padding:16px 0;">
-        <div style="font-size:48px;margin-bottom:12px;">🚫</div>
-        <h3 style="margin:0 0 8px;font-size:18px;color:#ef4444;">Loan Blocked</h3>
-        <p style="color:var(--text-secondary);font-size:14px;margin:0 0 16px;">
-          Your reputation score is too low to request new loans.
-        </p>
-        <div class="rep-widget" style="margin:0 0 16px;">
-          <div class="rep-bar-wrap">
-            <div class="rep-bar-track">
-              <div class="rep-bar-fill" style="width:${score}%;background:#ef4444;"></div>
-            </div>
-            <span class="rep-score-num" style="color:#ef4444;">${score}<span style="font-size:12px;color:var(--text-muted);">/100</span></span>
-          </div>
-          <div class="rep-blocked-msg"><i class="fa-solid fa-ban"></i> Minimum score required: 50</div>
-        </div>
-        <p style="color:var(--text-muted);font-size:12px;margin:0 0 16px;">
-          Repay existing loans on time to increase your score (+3 per repayment).
-        </p>
-        <button class="btn btn-secondary btn-sm" onclick="window.closeModal&&window.closeModal()">Close</button>
-      </div>
-    `);
-    return;
   }
 
   const amtRaw  = document.getElementById('nft-loan-amount')?.value?.trim();
@@ -654,9 +566,6 @@ async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
     if (fp) fp.style.display = 'none';
 
     nftLoadMyLoans();
-    // Refresh reputation score after successful repay
-    _reputationScore = null;
-    if (window.web3 && window.web3.address) _renderReputationWidget(window.web3.address);
 
   } catch(e) {
     if (window.closeModal) window.closeModal();
@@ -944,18 +853,11 @@ function nftLoansInit() {
   _initNFTContracts();
   nftLoadMyLoans();
 
-  // Load reputation widget if wallet already connected
-  if (window.web3 && window.web3.address) {
-    _renderReputationWidget(window.web3.address);
-  }
-
   // Re-init signer if wallet connects after page load
   if (window.web3) {
     window.web3.on('connected', () => {
       _nftContract = new ethers.Contract(window.NFT_LOAN_ADDRESS, window.NFT_LOAN_ABI, window.web3.signer);
-      _reputationScore = null; // reset cache
       nftLoadMyLoans();
-      if (window.web3.address) _renderReputationWidget(window.web3.address);
     });
   }
 }
@@ -975,4 +877,3 @@ window.nftClaimDefault       = nftClaimDefault;
 window.nftViewDetails        = nftViewDetails;
 window.nftLoadMyLoans        = nftLoadMyLoans;
 window._nftUpdateLoanPreview   = _nftUpdateLoanPreview;
-window._renderReputationWidget = _renderReputationWidget;
