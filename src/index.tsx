@@ -404,6 +404,9 @@ app.get('/', (c) => {
     <button class="nav-btn" data-page="about" onclick="showPage('about')">
       <i class="fa-solid fa-circle-info"></i> About Us
     </button>
+    <button class="nav-btn" data-page="nft-loans" onclick="showPage('nft-loans')">
+      <i class="fa-solid fa-hexagon-nodes"></i> NFT Loans
+    </button>
   </nav>
 
   <div class="header-actions">
@@ -1753,6 +1756,121 @@ app.get('/', (c) => {
     </div>
   </div>
 
+  <!-- ════ NFT LOANS PAGE ════ -->
+  <div class="page" id="page-nft-loans">
+    <div class="section-title"><i class="fa-solid fa-hexagon-nodes text-cyan" style="margin-right:8px;"></i>NFT Loans</div>
+    <div class="section-sub">Lock ERC-721 NFTs as collateral and borrow USDC — or fund NFT-backed loans as a lender.</div>
+
+    <!-- Contract info banner -->
+    <div class="nft-contract-banner">
+      <span><i class="fa-solid fa-file-contract"></i> NFTLoanManager:</span>
+      <code>0x441fB638C3DAC841AF32F0DE90FccA79b346A7c9</code>
+      <a href="https://testnet.arcscan.app/address/0x441fB638C3DAC841AF32F0DE90FccA79b346A7c9" target="_blank" class="nft-banner-link"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+    </div>
+
+    <div class="nft-page-grid">
+
+      <!-- LEFT: NFT Selector + Loan Form -->
+      <section class="nft-left-panel">
+
+        <!-- NFT Search -->
+        <div class="card card-lg">
+          <div class="card-title"><i class="fa-solid fa-magnifying-glass text-cyan"></i>Find Your NFTs</div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">NFT Contract Address (ERC-721)</label>
+            <div style="display:flex;gap:10px;">
+              <div class="input-group" style="flex:1;">
+                <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                <input id="nft-contract-addr" class="form-control mono" type="text" placeholder="0x..." />
+              </div>
+              <button class="btn btn-primary" style="white-space:nowrap;" onclick="nftFetchWalletNFTs()">
+                <i class="fa-solid fa-magnifying-glass"></i> Search
+              </button>
+            </div>
+            <span class="field-hint">Enter any ERC-721 contract deployed on Arc Testnet</span>
+          </div>
+        </div>
+
+        <!-- NFT Grid -->
+        <div class="card" style="padding:20px;margin-top:16px;">
+          <div class="card-title" style="margin-bottom:16px;"><i class="fa-solid fa-grid-2 text-purple"></i>Your NFTs</div>
+          <div id="nft-wallet-loading" class="nft-wallet-loading" style="display:none;">
+            <i class="fa-solid fa-spinner fa-spin"></i> Scanning wallet…
+          </div>
+          <div id="nft-wallet-empty" class="nft-wallet-empty">
+            <i class="fa-solid fa-magnifying-glass"></i><br>Enter an NFT contract address above and click Search.
+          </div>
+          <div id="nft-wallet-grid" class="nft-wallet-grid"></div>
+        </div>
+
+        <!-- Loan Request Form (hidden until NFT selected) -->
+        <div id="nft-loan-form-panel" class="card card-lg" style="display:none;margin-top:16px;">
+          <div class="card-title"><i class="fa-solid fa-pen-to-square text-green"></i>Loan Request</div>
+
+          <!-- Selected NFT preview -->
+          <div id="nft-selected-preview" class="nft-selected-preview"></div>
+
+          <div class="grid-2" style="gap:16px;margin-top:16px;">
+            <div class="form-group">
+              <label class="form-label">Loan Amount (USDC) <span class="required">*</span></label>
+              <div class="input-group">
+                <span class="input-icon" style="font-size:13px;font-weight:600;">$</span>
+                <input id="nft-loan-amount" class="form-control" type="number" min="1" step="0.01" placeholder="e.g. 100" oninput="window._nftUpdateLoanPreview&&_nftUpdateLoanPreview()" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Interest Rate (%) <span class="required">*</span></label>
+              <div class="input-group">
+                <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <input id="nft-interest-rate" class="form-control" type="number" min="0" max="50" step="0.1" placeholder="e.g. 5" oninput="window._nftUpdateLoanPreview&&_nftUpdateLoanPreview()" />
+              </div>
+              <span class="field-hint">Max 50%</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Duration (days) <span class="required">*</span></label>
+            <div class="input-group">
+              <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <input id="nft-duration-days" class="form-control" type="number" min="1" max="365" step="1" placeholder="e.g. 30" oninput="window._nftUpdateLoanPreview&&_nftUpdateLoanPreview()" />
+            </div>
+            <span class="field-hint">1 – 365 days</span>
+          </div>
+
+          <!-- Live preview -->
+          <div id="nft-loan-preview" class="nft-loan-preview" style="display:none;"></div>
+
+          <div class="nft-form-warning">
+            <i class="fa-solid fa-lock"></i>
+            Your NFT will be transferred to the smart contract escrow. It will be returned upon full repayment.
+          </div>
+
+          <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="nftSubmitLoanRequest()">
+            <i class="fa-solid fa-lock"></i> Lock NFT &amp; Request Loan
+          </button>
+        </div>
+
+      </section><!-- /nft-left-panel -->
+
+      <!-- RIGHT: My Loans Dashboard -->
+      <section class="nft-right-panel">
+        <div class="card card-lg" style="height:100%;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+            <div class="card-title" style="margin:0;"><i class="fa-solid fa-chart-bar text-cyan"></i>My NFT Loans</div>
+            <button class="btn btn-ghost btn-sm" onclick="nftLoadMyLoans()">
+              <i class="fa-solid fa-arrows-rotate"></i> Refresh
+            </button>
+          </div>
+          <div id="nft-my-loans-list">
+            <div class="nft-loans-empty"><i class="fa-solid fa-wallet"></i><br>Connect wallet to see your loans.</div>
+          </div>
+        </div>
+      </section><!-- /nft-right-panel -->
+
+    </div><!-- /nft-page-grid -->
+
+  </div><!-- /page-nft-loans -->
+
   <!-- ════ ABOUT US PAGE ════ -->
   <div class="page" id="page-about">
     <div class="section-title"><i class="fa-solid fa-circle-info text-cyan" style="margin-right:8px;"></i>About Us</div>
@@ -2052,6 +2170,7 @@ app.get('/', (c) => {
 <script src="/static/receipt.js"></script>
 <script src="/static/docs-viewer.js"></script>
 <script src="/static/security.js"></script>
+<script src="/static/nftLoans.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>`)

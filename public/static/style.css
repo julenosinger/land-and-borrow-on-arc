@@ -2683,3 +2683,379 @@ html.light .about-tech-item {
   }
   .about-title { font-size: 22px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   NFT LOANS PAGE
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Contract banner ── */
+.nft-contract-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(6,182,212,0.06);
+  border: 1px solid rgba(6,182,212,0.2);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.nft-contract-banner code {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--cyan);
+  word-break: break-all;
+}
+.nft-banner-link {
+  color: var(--cyan);
+  text-decoration: none;
+  font-size: 12px;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+.nft-banner-link:hover { opacity: 1; }
+
+/* ── Page two-col grid ── */
+.nft-page-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .nft-page-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Wallet loading/empty states ── */
+.nft-wallet-loading,
+.nft-wallet-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  gap: 10px;
+  min-height: 120px;
+}
+.nft-wallet-loading i,
+.nft-wallet-empty i {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+/* ── NFT card grid ── */
+.nft-wallet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+/* ── Individual NFT card ── */
+.nft-card {
+  border: 2px solid var(--border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  background: var(--bg-secondary);
+  position: relative;
+}
+.nft-card:hover {
+  border-color: var(--cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(6,182,212,0.15);
+}
+.nft-card-selected {
+  border-color: var(--cyan) !important;
+  box-shadow: 0 0 0 3px rgba(6,182,212,0.25) !important;
+}
+.nft-card-img {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+.nft-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.nft-img-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(6,182,212,0.08), rgba(139,92,246,0.08));
+  color: var(--text-muted);
+  font-size: 28px;
+}
+.nft-card-body {
+  padding: 10px 12px;
+}
+.nft-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nft-card-coll {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nft-card-id {
+  font-size: 11px;
+  color: var(--cyan);
+  font-weight: 600;
+  margin-top: 2px;
+}
+.nft-card-select-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--cyan);
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.nft-card-selected .nft-card-select-overlay { opacity: 1; }
+
+/* ── Selected NFT preview in form ── */
+.nft-selected-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.nft-selected-img {
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.nft-selected-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.nft-selected-addr {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Loan preview box ── */
+.nft-loan-preview {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 12px;
+}
+.nft-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-color);
+}
+.nft-preview-row:last-child { border-bottom: none; }
+.nft-preview-row span { color: var(--text-secondary); }
+.nft-preview-total { font-size: 14px; }
+.nft-preview-total strong { color: var(--cyan); font-size: 15px; }
+
+/* ── Form warning box ── */
+.nft-form-warning,
+.nft-confirm-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 14px;
+  line-height: 1.5;
+}
+.nft-form-warning i,
+.nft-confirm-warning i { color: #f59e0b; margin-top: 2px; flex-shrink: 0; }
+
+/* ── Confirmation modal ── */
+.nft-confirm-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.nft-confirm-nft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nft-confirm-details {
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* ── My NFT Loans dashboard ── */
+.nft-loans-loading,
+.nft-loans-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  gap: 10px;
+  min-height: 120px;
+}
+.nft-loans-loading i,
+.nft-loans-empty i {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+/* ── Loan card ── */
+.nft-loan-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  margin-bottom: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.nft-loan-card:hover { border-color: var(--cyan); }
+.nft-loan-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.nft-loan-nft-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nft-loan-img {
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.nft-loan-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.nft-loan-addr {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.nft-loan-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+.nft-loan-role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.nft-role-borrower {
+  background: rgba(139,92,246,0.15);
+  color: #a78bfa;
+}
+.nft-role-lender {
+  background: rgba(16,185,129,0.15);
+  color: var(--green);
+}
+.nft-loan-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+.nft-status-requested { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.nft-status-funded    { background: rgba(6,182,212,0.15);  color: var(--cyan); }
+.nft-status-repaid    { background: rgba(16,185,129,0.15); color: var(--green); }
+.nft-status-defaulted { background: rgba(239,68,68,0.15);  color: #ef4444; }
+.nft-status-cancelled { background: rgba(107,114,128,0.15); color: #6b7280; }
+
+.nft-loan-card-body {
+  padding: 10px 14px;
+}
+.nft-loan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.html.light .nft-loan-row { border-bottom-color: rgba(0,0,0,0.04); }
+.nft-loan-row:last-child { border-bottom: none; }
+.nft-loan-row span { color: var(--text-secondary); }
+
+.nft-loan-card-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Countdown timer ── */
+.nft-timer { color: var(--cyan); font-weight: 700; }
+.nft-timer-overdue { color: #ef4444 !important; }
+
+/* ── Status color helpers (standalone) ── */
+.nft-status-requested strong { color: #f59e0b; }
+.nft-status-funded    strong { color: var(--cyan); }
+.nft-status-repaid    strong { color: var(--green); }
+.nft-status-defaulted strong { color: #ef4444; }
+.nft-status-cancelled strong { color: #6b7280; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .nft-wallet-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+  }
+  .nft-loan-card-header { flex-direction: column; align-items: flex-start; }
+  .nft-loan-right { flex-direction: row; align-items: center; }
+}
