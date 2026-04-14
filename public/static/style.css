@@ -3128,3 +3128,73 @@ html.light .nft-stoggle-btn.active {
   background: #fff;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   NFT LOANS — MINT BANNER
+   ═══════════════════════════════════════════════════════════════ */
+
+.nft-mint-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(6,182,212,0.10));
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.nft-mint-banner-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.nft-mint-banner-text > i {
+  font-size: 20px;
+  color: #6366f1;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.nft-mint-banner-text > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nft-mint-banner-text strong {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.nft-mint-banner-text span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.nft-mint-banner-text em {
+  font-style: normal;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-accent:hover { opacity: 0.88; }
+.btn-accent:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+  .nft-mint-banner { flex-direction: column; align-items: flex-start; }
+  .btn-accent { width: 100%; justify-content: center; }
+}

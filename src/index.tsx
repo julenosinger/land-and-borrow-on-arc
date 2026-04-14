@@ -1777,6 +1777,20 @@ app.get('/', (c) => {
         <div class="card card-lg">
           <div class="card-title"><i class="fa-solid fa-magnifying-glass text-cyan"></i>Find Your NFTs</div>
 
+          <!-- Mint DaatFI NFT banner -->
+          <div class="nft-mint-banner">
+            <div class="nft-mint-banner-text">
+              <i class="fa-solid fa-hammer"></i>
+              <div>
+                <strong>Don't have a testnet NFT?</strong>
+                <span>Mint a free <em>DaatFI Testnet NFT</em> directly on Arc Testnet — one click, no cost.</span>
+              </div>
+            </div>
+            <button id="nft-mint-btn" class="btn btn-accent" onclick="nftMintDaatFI()">
+              <i class="fa-solid fa-hammer"></i> Mint NFT
+            </button>
+          </div>
+
           <!-- Search mode toggle -->
           <div class="nft-search-toggle" id="nft-search-toggle">
             <button class="nft-stoggle-btn active" id="nft-stoggle-contract"
@@ -1802,7 +1816,12 @@ app.get('/', (c) => {
                 <i class="fa-solid fa-magnifying-glass"></i> Search
               </button>
             </div>
-            <span class="field-hint" id="nft-search-hint">Enter any ERC-721 contract deployed on Arc Testnet — your connected wallet's NFTs will be shown</span>
+            <span class="field-hint" id="nft-search-hint">
+              Enter any ERC-721 contract on Arc Testnet — or use
+              <a href="#" style="color:var(--primary);text-decoration:underline;" onclick="event.preventDefault();document.getElementById('nft-contract-addr').value=window.DAATFI_NFT_ADDRESS||'';nftFetchWalletNFTs();">
+                DaatFI NFT (<code style="font-size:11px;">0x3305…Cf7b</code>)
+              </a>
+            </span>
           </div>
 
           <!-- Wallet mode: extra wallet address field (hidden by default) -->
