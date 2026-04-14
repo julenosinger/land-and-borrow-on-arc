@@ -814,6 +814,45 @@ function showLoanSuccessModal(loanId, txHash) {
   });
 }
 
+// ── Borrow type selector ──────────────────────────────────────
+// mode: 'crypto' | 'traditional' | null (show selector)
+function setBorrowType(mode) {
+  const selector   = document.getElementById('borrow-type-selector');
+  const cryptoPanel  = document.getElementById('borrow-crypto-panel');
+  const tradWizard = document.getElementById('borrow-traditional-wizard');
+  const wizHeader  = tradWizard?.querySelector('.bw-header');
+  const wizStepper = document.getElementById('borrow-steps');
+  const wizProgress = tradWizard?.querySelector('.bw-progress-track');
+  const wizTitleRow = tradWizard?.querySelector('.bw-title-row');
+
+  if (mode === 'crypto') {
+    if (selector)    selector.style.display    = 'none';
+    if (cryptoPanel) cryptoPanel.style.display = 'block';
+    // Show the traditional wizard but hide the header/stepper — step 2 is already inside it
+    if (tradWizard)  tradWizard.style.display  = 'block';
+    if (wizStepper)  wizStepper.style.display  = 'none';
+    if (wizProgress) wizProgress.style.display = 'none';
+    if (wizTitleRow) wizTitleRow.style.display = 'none';
+    borrowStep(2);
+  } else if (mode === 'traditional') {
+    if (selector)    selector.style.display    = 'none';
+    if (cryptoPanel) cryptoPanel.style.display = 'none';
+    if (tradWizard)  tradWizard.style.display  = 'block';
+    if (wizStepper)  wizStepper.style.display  = '';
+    if (wizProgress) wizProgress.style.display = '';
+    if (wizTitleRow) wizTitleRow.style.display = '';
+    borrowStep(1);
+  } else {
+    // null — show selector only
+    if (selector)    selector.style.display    = 'block';
+    if (cryptoPanel) cryptoPanel.style.display = 'none';
+    if (tradWizard)  tradWizard.style.display  = 'none';
+    if (wizStepper)  wizStepper.style.display  = '';
+    if (wizProgress) wizProgress.style.display = '';
+    if (wizTitleRow) wizTitleRow.style.display = '';
+  }
+}
+
 function resetBorrowForm() {
   borrowStep(1);
   ['b-fullname','b-email','b-city','b-amount','b-purpose','rwa-description','rwa-value','rwa-jurisdiction','crypto-amount'].forEach(id => {

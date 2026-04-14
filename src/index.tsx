@@ -717,8 +717,45 @@ app.get('/', (c) => {
       <button onclick="document.getElementById('borrow-offer-banner').style.display='none'" class="borrow-offer-banner-close">&times;</button>
     </div>
 
-    <!-- ── BORROW WIZARD WRAPPER ── -->
-    <div class="borrow-wizard">
+    <!-- ── LOAN TYPE SELECTOR ── -->
+    <div class="borrow-type-selector" id="borrow-type-selector">
+      <div class="bts-title">How would you like to borrow?</div>
+      <div class="bts-cards">
+
+        <button class="bts-card" id="bts-crypto" onclick="setBorrowType('crypto')">
+          <div class="bts-card-icon"><i class="fa-brands fa-bitcoin"></i></div>
+          <div class="bts-card-label">Crypto Loan</div>
+          <div class="bts-card-desc">No application required. Connect your wallet, set the terms, and submit directly on-chain.</div>
+          <div class="bts-card-badge bts-badge-instant"><i class="fa-solid fa-bolt"></i> Instant · No KYC</div>
+        </button>
+
+        <button class="bts-card" id="bts-traditional" onclick="setBorrowType('traditional')">
+          <div class="bts-card-icon"><i class="fa-solid fa-file-lines"></i></div>
+          <div class="bts-card-label">Traditional Loan</div>
+          <div class="bts-card-desc">Fill out the full application with personal info, collateral documents, and review steps.</div>
+          <div class="bts-card-badge bts-badge-full"><i class="fa-solid fa-list-check"></i> Full Application</div>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ── CRYPTO LOAN PANEL (no application) ── -->
+    <div id="borrow-crypto-panel" style="display:none;">
+      <div class="borrow-wizard" style="margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0;">
+        <div class="bw-header" style="padding-bottom:0;border-bottom:none;">
+          <div class="bw-title-row">
+            <div class="bw-icon-wrap"><i class="fa-brands fa-bitcoin"></i></div>
+            <div>
+              <h1 class="bw-title">Crypto Loan</h1>
+              <p class="bw-subtitle">No application needed — set your terms and submit on-chain. <a href="#" onclick="event.preventDefault();setBorrowType(null)" style="color:var(--primary);text-decoration:underline;font-size:13px;">Change loan type</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BORROW WIZARD WRAPPER (Traditional) ── -->
+    <div class="borrow-wizard" id="borrow-traditional-wizard" style="display:none;">
 
       <!-- ── WIZARD HEADER ── -->
       <div class="bw-header">
@@ -1288,7 +1325,7 @@ app.get('/', (c) => {
         </div>
       </div>
 
-    </div><!-- /borrow-wizard -->
+    </div><!-- /borrow-traditional-wizard -->
   </div>
 
   <!-- ══ PAGE: LEND ════════════════════════════════════════════════════════════ -->
