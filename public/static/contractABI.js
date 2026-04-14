@@ -313,8 +313,8 @@ window.ERC20_ABI          = ERC20_ABI;
 window.LOAN_STATUS        = LOAN_STATUS;
 window.COLLATERAL_TYPE    = COLLATERAL_TYPE;
 
-// ── NFTLoanManager — deployed Arc Testnet 2026 ────────────────────────────────
-const NFT_LOAN_ADDRESS = "0x441fB638C3DAC841AF32F0DE90FccA79b346A7c9";
+// ── NFTLoanManager v2 — Reputation System — deployed Arc Testnet 2026 ─────────
+const NFT_LOAN_ADDRESS = "0x0bAF758cc03C0d3fBe0e0C9b7342777282c76ee8";
 
 const NFT_LOAN_ABI = [
   {"inputs":[{"internalType":"address","name":"_usdcToken","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
@@ -323,10 +323,12 @@ const NFT_LOAN_ABI = [
   {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"loanId","type":"uint256"},{"indexed":true,"internalType":"address","name":"lender","type":"address"},{"indexed":false,"internalType":"uint256","name":"dueDate","type":"uint256"}],"name":"LoanFunded","type":"event"},
   {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"loanId","type":"uint256"},{"indexed":true,"internalType":"address","name":"borrower","type":"address"},{"indexed":false,"internalType":"uint256","name":"repaymentAmount","type":"uint256"}],"name":"LoanRepaid","type":"event"},
   {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"loanId","type":"uint256"},{"indexed":true,"internalType":"address","name":"borrower","type":"address"},{"indexed":true,"internalType":"address","name":"nftAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"loanAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"repaymentAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"durationDays","type":"uint256"}],"name":"LoanRequested","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"wallet","type":"address"},{"indexed":false,"internalType":"uint256","name":"oldScore","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"newScore","type":"uint256"}],"name":"ReputationUpdated","type":"event"},
   {"inputs":[],"name":"MAX_DURATION_DAYS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"MAX_INTEREST_BPS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"MAX_LOAN_USDC","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"MIN_LOAN_USDC","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"MIN_REPUTATION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"borrowerLoans","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"}],"name":"cancelLoanRequest","outputs":[],"stateMutability":"nonpayable","type":"function"},
   {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"}],"name":"claimDefault","outputs":[],"stateMutability":"nonpayable","type":"function"},
@@ -343,6 +345,7 @@ const NFT_LOAN_ABI = [
   {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"bytes","name":"","type":"bytes"}],"name":"onERC721Received","outputs":[{"internalType":"bytes4","name":"","type":"bytes4"}],"stateMutability":"pure","type":"function"},
   {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
   {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"}],"name":"repayLoan","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"wallet","type":"address"}],"name":"reputationScore","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"}],"name":"timeRemaining","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"usdcToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
 ];

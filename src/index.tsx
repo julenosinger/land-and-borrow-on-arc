@@ -1763,9 +1763,15 @@ app.get('/', (c) => {
 
     <!-- Contract info banner -->
     <div class="nft-contract-banner">
-      <span><i class="fa-solid fa-file-contract"></i> NFTLoanManager:</span>
-      <code>0x441fB638C3DAC841AF32F0DE90FccA79b346A7c9</code>
-      <a href="https://testnet.arcscan.app/address/0x441fB638C3DAC841AF32F0DE90FccA79b346A7c9" target="_blank" class="nft-banner-link"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+      <span><i class="fa-solid fa-file-contract"></i> NFTLoanManager v2:</span>
+      <code>0x0bAF758cc03C0d3fBe0e0C9b7342777282c76ee8</code>
+      <a href="https://testnet.arcscan.app/address/0x0bAF758cc03C0d3fBe0e0C9b7342777282c76ee8" target="_blank" class="nft-banner-link"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+    </div>
+
+    <!-- Reputation score widget -->
+    <div id="nft-reputation-widget" class="nft-rep-placeholder">
+      <i class="fa-solid fa-star"></i>
+      <span>Connect wallet to see your Reputation Score</span>
     </div>
 
     <div class="nft-page-grid">
