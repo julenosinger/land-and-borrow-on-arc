@@ -145,6 +145,21 @@ function _getReadOnlyNFT() {
 }
 
 // ── NFT metadata resolution ───────────────────────────────────────────────────
+// Parses a data: URI (base64 or URL-encoded) without using fetch(),
+// since browsers/Workers may not support fetch() for data: URIs.
+function _parseDataUri(uri) {
+  try {
+    // data:[mediatype][;base64],<data>
+    const comma = uri.indexOf(',');
+    if (comma === -1) return null;
+    const header = uri.slice(0, comma);    // e.g. "data:application/json;base64"
+    const body   = uri.slice(comma + 1);  // everything after the comma
+    const isBase64 = header.includes(';base64');
+    const text = isBase64 ? atob(body) : decodeURIComponent(body);
+    return JSON.parse(text);
+  } catch { return null; }
+}
+
 async function _fetchNFTMeta(nftAddr, tokenId, provider) {
   const key = `${nftAddr}:${tokenId}`;
   if (_nftCache[key]) return _nftCache[key];
@@ -157,20 +172,33 @@ async function _fetchNFTMeta(nftAddr, tokenId, provider) {
     try { collectionName = await nft.name(); } catch {}
     tokenName = `${collectionName} #${tokenId}`;
 
-    // try tokenURI → fetch JSON
+    // try tokenURI → resolve JSON
     try {
       let uri = await nft.tokenURI(tokenId);
-      if (uri.startsWith('ipfs://')) uri = 'https://gateway.pinata.cloud/ipfs/' + uri.slice(7);
-      const resp = await Promise.race([
-        fetch(uri, { signal: AbortSignal.timeout(6000) }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
-      ]);
-      const meta = await resp.json();
-      if (meta.name)  tokenName = meta.name;
-      if (meta.image) {
-        image = meta.image.startsWith('ipfs://')
-          ? 'https://gateway.pinata.cloud/ipfs/' + meta.image.slice(7)
-          : meta.image;
+
+      let meta = null;
+
+      if (uri.startsWith('data:')) {
+        // On-chain data URI — parse directly without fetch()
+        meta = _parseDataUri(uri);
+      } else {
+        // Remote URI (ipfs:// or https://)
+        if (uri.startsWith('ipfs://')) uri = 'https://gateway.pinata.cloud/ipfs/' + uri.slice(7);
+        const resp = await Promise.race([
+          fetch(uri),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
+        ]);
+        meta = await resp.json();
+      }
+
+      if (meta) {
+        if (meta.name)  tokenName = decodeURIComponent(meta.name);
+        if (meta.image) {
+          let img = meta.image;
+          if (img.startsWith('ipfs://')) img = 'https://gateway.pinata.cloud/ipfs/' + img.slice(7);
+          // Keep data: URIs (svg, png, etc.) as-is — browsers render them fine
+          image = img;
+        }
       }
     } catch {}
 
