@@ -1789,6 +1789,11 @@ app.get('/', (c) => {
             </div>
             <span class="field-hint">Enter any ERC-721 contract deployed on Arc Testnet</span>
           </div>
+          <!-- ── Network rule notice ── -->
+          <div class="nft-network-rule">
+            <i class="fa-solid fa-circle-nodes"></i>
+            <span><strong>Arc Testnet only.</strong> Any ERC-721 NFT on Arc Testnet (Chain ID&nbsp;5042002) is accepted as collateral — no collection restrictions, no rarity filters, no valuation requirements. Testnet environment.</span>
+          </div>
         </div>
 
         <!-- NFT Grid -->

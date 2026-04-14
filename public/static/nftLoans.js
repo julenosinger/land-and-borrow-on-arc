@@ -130,6 +130,10 @@ function _nftImgHtml(image, name, size = 80) {
 }
 
 // ── Fetch wallet NFTs ─────────────────────────────────────────────────────────
+// NETWORK RULE: This system operates exclusively on ARC Network (testnet,
+// Chain ID 5042002). Any ERC-721 NFT deployed on Arc Testnet is accepted as
+// collateral. No collection whitelist, no rarity checks, no pricing oracle —
+// the system is intentionally open and testnet-friendly.
 async function nftFetchWalletNFTs() {
   const container = document.getElementById('nft-wallet-grid');
   const emptyEl   = document.getElementById('nft-wallet-empty');

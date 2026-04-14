@@ -3059,3 +3059,24 @@ html.light .about-tech-item {
   .nft-loan-card-header { flex-direction: column; align-items: flex-start; }
   .nft-loan-right { flex-direction: row; align-items: center; }
 }
+
+/* ── NFT network rule notice ── */
+.nft-network-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(139,92,246,0.06);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 14px;
+  line-height: 1.55;
+}
+.nft-network-rule i {
+  color: #a78bfa;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.nft-network-rule strong { color: #a78bfa; }
