@@ -243,7 +243,7 @@ app.get('/', (c) => {
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
   <!-- Styles -->
-  <link rel="stylesheet" href="/static/style.css?v=20260415c" />
+  <link rel="stylesheet" href="/static/style.css?v=20260415d" />
   <!-- Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" crossorigin="anonymous" />
 
@@ -2209,16 +2209,16 @@ app.get('/', (c) => {
 
 <!-- ════ SCRIPTS ════ -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="/static/contractABI.js?v=20260415c"></script>
-<script src="/static/web3Manager.js?v=20260415c"></script>
-<script src="/static/ui.js?v=20260415c"></script>
-<script src="/static/chatbot.js?v=20260415c"></script>
-<script src="/static/marketplace.js?v=20260415c"></script>
-<script src="/static/receipt.js?v=20260415c"></script>
-<script src="/static/docs-viewer.js?v=20260415c"></script>
-<script src="/static/security.js?v=20260415c"></script>
-<script src="/static/nftLoans.js?v=20260415c"></script>
-<script src="/static/app.js?v=20260415c"></script>
+<script src="/static/contractABI.js?v=20260415d"></script>
+<script src="/static/web3Manager.js?v=20260415d"></script>
+<script src="/static/ui.js?v=20260415d"></script>
+<script src="/static/chatbot.js?v=20260415d"></script>
+<script src="/static/marketplace.js?v=20260415d"></script>
+<script src="/static/receipt.js?v=20260415d"></script>
+<script src="/static/docs-viewer.js?v=20260415d"></script>
+<script src="/static/security.js?v=20260415d"></script>
+<script src="/static/nftLoans.js?v=20260415d"></script>
+<script src="/static/app.js?v=20260415d"></script>
 </body>
 </html>`)
 })
