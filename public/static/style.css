@@ -3198,3 +3198,72 @@ html.light .nft-stoggle-btn.active {
   .nft-mint-banner { flex-direction: column; align-items: flex-start; }
   .btn-accent { width: 100%; justify-content: center; }
 }
+
+/* ── Escrow Vault ── */
+.nft-escrow-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.nft-escrow-info i { color: var(--amber); margin-top: 2px; flex-shrink: 0; font-size: 13px; }
+
+.nft-escrow-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+.nft-escrow-card:hover { border-color: var(--amber); }
+
+.nft-escrow-card-img {
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.nft-escrow-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.nft-escrow-card-name {
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nft-escrow-card-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.nft-escrow-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(245,158,11,0.1);
+  color: var(--amber);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nft-escrow-loan-id {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}

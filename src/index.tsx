@@ -1879,9 +1879,28 @@ app.get('/', (c) => {
 
       </section><!-- /nft-left-panel -->
 
-      <!-- RIGHT: My Loans Dashboard -->
+      <!-- RIGHT: My Loans Dashboard + Escrow Vault -->
       <section class="nft-right-panel">
-        <div class="card card-lg" style="height:100%;">
+
+        <!-- Escrow Vault -->
+        <div class="card card-lg" style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <div class="card-title" style="margin:0;"><i class="fa-solid fa-vault text-amber"></i>Escrow Vault</div>
+            <button class="btn btn-ghost btn-sm" onclick="nftLoadEscrowVault()">
+              <i class="fa-solid fa-arrows-rotate"></i> Refresh
+            </button>
+          </div>
+          <div class="nft-escrow-info">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>NFTs locked here as collateral. They are held by the smart contract and returned upon full repayment or claimed by the lender on default.</span>
+          </div>
+          <div id="nft-escrow-vault-list" style="margin-top:12px;">
+            <div class="nft-loans-empty"><i class="fa-solid fa-vault"></i><br>Connect wallet to view escrow vault.</div>
+          </div>
+        </div>
+
+        <!-- My NFT Loans -->
+        <div class="card card-lg">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
             <div class="card-title" style="margin:0;"><i class="fa-solid fa-chart-bar text-cyan"></i>My NFT Loans</div>
             <button class="btn btn-ghost btn-sm" onclick="nftLoadMyLoans()">
@@ -1892,6 +1911,7 @@ app.get('/', (c) => {
             <div class="nft-loans-empty"><i class="fa-solid fa-wallet"></i><br>Connect wallet to see your loans.</div>
           </div>
         </div>
+
       </section><!-- /nft-right-panel -->
 
     </div><!-- /nft-page-grid -->

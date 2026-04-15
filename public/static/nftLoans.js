@@ -52,9 +52,10 @@ function _nftToast(msg, type = 'info') {
   if (window.showToast) window.showToast(msg, type);
   else console.log(`[NFT] ${type}: ${msg}`);
 }
-function _nftShowModal(html) {
+function _nftShowModal(html, title) {
   if (!window.showModal) { alert('Modal unavailable'); return; }
-  window.showModal({ html, size: 'md' });
+  // showModal() in app.js expects { title, content, size }
+  window.showModal({ title: title || '', content: html, size: 'modal-md' });
 }
 
 // ── DaatFI NFT Mint ───────────────────────────────────────────────────────────
@@ -167,8 +168,8 @@ async function _fetchNFTMeta(nftAddr, tokenId, provider) {
   const key = `${nftAddr}:${tokenId}`;
   if (_nftCache[key]) return _nftCache[key];
   try {
-    // Use passed provider, then window.web3.provider, then JsonRpcProvider as last resort
-    let prov = provider || (window.web3 && window.web3.provider) || new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    // Always use JsonRpcProvider for read-only metadata calls — avoids Web3Provider stalls.
+    let prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
     const nft = new ethers.Contract(nftAddr, window.ERC721_ABI, prov);
     let collectionName = 'Unknown Collection';
     let tokenName      = `Token #${tokenId}`;
@@ -264,8 +265,9 @@ async function nftFetchWalletNFTs() {
   const addr            = window.web3.address;
 
   try {
-    // Use the already-connected Web3Provider from the wallet — no new provider needed.
-    const provider = window.web3.provider;
+    // Always use JsonRpcProvider for read-only NFT calls — reliable on Arc Testnet.
+    // Web3Provider can stall on network detection in some wallet states.
+    const provider = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
     const nft = new ethers.Contract(nftContractAddr, window.ERC721_ABI, provider);
 
     let bal;
@@ -273,7 +275,7 @@ async function nftFetchWalletNFTs() {
       bal = await nft.balanceOf(addr);
     } catch(e) {
       console.error('[NFT balanceOf error]', e);
-      throw new Error('balanceOf failed: ' + (e.reason || e.message || String(e)));
+      throw new Error('Contract does not respond to balanceOf. Make sure it is a valid ERC-721 on Arc Testnet.');
     }
 
     const count = Math.min(Number(bal), 50);
@@ -397,9 +399,9 @@ async function nftSubmitLoanRequest() {
 
   const repayment  = (Number(amtRaw) + (Number(amtRaw) * Number(rateRaw) / 100)).toFixed(2);
 
-  // Confirmation modal
+  // Confirmation modal — use title + content format expected by showModal()
   _nftShowModal(`
-    <div style="padding:8px 0;">
+    <div style="padding:4px 0;">
       <div class="nft-confirm-header">
         <div class="nft-confirm-nft">
           ${_nftImgHtml(_selectedNFT.image, _selectedNFT.name, 56)}
@@ -422,11 +424,11 @@ async function nftSubmitLoanRequest() {
       <div style="display:flex;gap:12px;margin-top:16px;">
         <button class="btn btn-secondary" style="flex:1;" onclick="window.closeModal&&window.closeModal()">Cancel</button>
         <button class="btn btn-primary" style="flex:1;" id="nft-confirm-lock-btn" onclick="nftExecuteLoanRequest(${loanAmt},${duration},${interestBps})">
-          <i class="fa-solid fa-lock"></i> Lock NFT & Request Loan
+          <i class="fa-solid fa-lock"></i> Lock NFT &amp; Request Loan
         </button>
       </div>
     </div>
-  `);
+  `, 'Confirm Loan Request');
 }
 
 async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
@@ -472,10 +474,9 @@ async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
     // Show success modal
     if (window.showModal) {
       window.showModal({
-        html: `
-          <div style="text-align:center;padding:16px 0;">
-            <div style="font-size:40px;margin-bottom:12px;">🔒</div>
-            <h3 style="margin:0 0 8px;font-size:18px;">Loan Request Created!</h3>
+        title: '🔒 Loan Request Created!',
+        content: `
+          <div style="text-align:center;padding:8px 0;">
             <p style="color:var(--text-secondary);font-size:14px;margin:0 0 16px;">
               Your NFT is now locked in escrow. Loan ID: <strong>#${loanId}</strong>
             </p>
@@ -483,7 +484,7 @@ async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
               <div class="nft-preview-row"><span>Tx Hash</span><code style="font-size:11px;">${receipt.transactionHash.slice(0,20)}…</code></div>
               <div class="nft-preview-row"><span>Block</span><strong>${receipt.blockNumber}</strong></div>
             </div>
-            <a href="${window.ARC_EXPLORER}/tx/${receipt.transactionHash}" target="_blank" class="btn btn-secondary btn-sm" style="margin-bottom:8px;display:inline-block;">
+            <a href="${window.ARC_EXPLORER || 'https://testnet.arcscan.app'}/tx/${receipt.transactionHash}" target="_blank" class="btn btn-secondary btn-sm" style="margin-bottom:8px;display:inline-block;">
               <i class="fa-solid fa-arrow-up-right-from-square"></i> View on Explorer
             </a>
             <br>
@@ -492,7 +493,7 @@ async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
             </button>
           </div>
         `,
-        size: 'sm'
+        size: 'modal-sm'
       });
     }
 
@@ -503,6 +504,7 @@ async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
     if (fp) fp.style.display = 'none';
 
     nftLoadMyLoans();
+    nftLoadEscrowVault();
 
   } catch(e) {
     if (window.closeModal) window.closeModal();
@@ -689,6 +691,7 @@ async function nftExecuteRepay(loanId, repaymentAmount) {
 
     if (window.closeModal) window.closeModal();
     _nftToast(`✅ Loan #${loanId} repaid! NFT returned to your wallet.`, 'success');
+    nftLoadEscrowVault();
 
     if (window.showModal) {
       window.showModal({
@@ -727,6 +730,7 @@ async function nftCancelLoan(loanId) {
     await tx.wait();
     _nftToast(`✅ Loan #${loanId} cancelled. NFT returned.`, 'success');
     nftLoadMyLoans();
+    nftLoadEscrowVault();
   } catch(e) {
     _nftToast(`Error: ${e.reason || e.message}`, 'error');
   }
@@ -742,6 +746,7 @@ async function nftClaimDefault(loanId) {
     await tx.wait();
     _nftToast(`✅ Defaulted NFT claimed for loan #${loanId}.`, 'success');
     nftLoadMyLoans();
+    nftLoadEscrowVault();
   } catch(e) {
     _nftToast(`Error: ${e.reason || e.message}`, 'error');
   }
@@ -785,10 +790,84 @@ async function nftViewDetails(loanId) {
   `);
 }
 
+// ── Escrow Vault — shows NFTs currently locked as collateral ──────────────────
+async function nftLoadEscrowVault() {
+  const container = document.getElementById('nft-escrow-vault-list');
+  if (!container) return;
+
+  if (!window.web3 || !window.web3.address) {
+    container.innerHTML = '<div class="nft-loans-empty"><i class="fa-solid fa-vault"></i><br>Connect wallet to view escrow vault.</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="nft-loans-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading escrow vault…</div>';
+
+  try {
+    const prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    const c    = _getReadOnlyNFT();
+    const addr = window.web3.address;
+
+    // Get loans where this user is borrower OR lender
+    const [borrowerIds, lenderIds] = await Promise.all([
+      c.getBorrowerLoans(addr).catch(() => []),
+      c.getLenderLoans(addr).catch(() => [])
+    ]);
+
+    const allIds = [...new Set([
+      ...borrowerIds.map(i => i.toString()),
+      ...lenderIds.map(i => i.toString())
+    ])];
+
+    if (allIds.length === 0) {
+      container.innerHTML = '<div class="nft-loans-empty"><i class="fa-solid fa-vault"></i><br>No NFTs in escrow. Lock an NFT as collateral to get started.</div>';
+      return;
+    }
+
+    // Filter only loans where NFT is currently locked (status 0 = Requested, 1 = Funded)
+    const escrowLoans = [];
+    for (const id of allIds) {
+      try {
+        const loan = await c.getLoan(id);
+        const status = Number(loan.status);
+        // Status 0 (Requested) or 1 (Funded) = NFT is locked in escrow
+        if (status === 0 || status === 1) {
+          const meta = await _fetchNFTMeta(loan.nftAddress, loan.tokenId.toString(), prov);
+          const isBorrower = borrowerIds.map(i => i.toString()).includes(id);
+          escrowLoans.push({ ...loan, _meta: meta, _id: id, _role: isBorrower ? 'borrower' : 'lender', _status: status });
+        }
+      } catch {}
+    }
+
+    if (escrowLoans.length === 0) {
+      container.innerHTML = '<div class="nft-loans-empty"><i class="fa-solid fa-vault"></i><br>No NFTs currently locked in escrow.</div>';
+      return;
+    }
+
+    container.innerHTML = escrowLoans.map(loan => `
+      <div class="nft-escrow-card">
+        <div class="nft-escrow-card-img">${_nftImgHtml(loan._meta?.image, loan._meta?.name, 48)}</div>
+        <div class="nft-escrow-card-info">
+          <div class="nft-escrow-card-name">${loan._meta?.name || 'NFT #' + loan.tokenId}</div>
+          <div class="nft-escrow-card-sub">${_shortAddr(loan.nftAddress)} · Token #${loan.tokenId}</div>
+          <div class="nft-escrow-loan-id">Loan #${loan._id} · ${loan._status === 0 ? 'Awaiting Lender' : 'Active'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+          <span class="nft-escrow-lock-badge"><i class="fa-solid fa-lock"></i> Locked</span>
+          <span style="font-size:11px;color:var(--text-muted);">${loan._role === 'borrower' ? 'You borrowed' : 'You lent'}</span>
+        </div>
+      </div>
+    `).join('');
+
+  } catch(e) {
+    container.innerHTML = `<div class="nft-loans-empty"><i class="fa-solid fa-triangle-exclamation"></i><br>Error: ${e.message}</div>`;
+  }
+}
+
 // ── Page init (called by showPage) ────────────────────────────────────────────
 function nftLoansInit() {
   _initNFTContracts();
   nftLoadMyLoans();
+  nftLoadEscrowVault();
 
   // Pre-fill the DaatFI NFT contract address automatically
   const inputEl = document.getElementById('nft-contract-addr');
@@ -806,6 +885,7 @@ function nftLoansInit() {
     window.web3.on('connected', () => {
       _nftContract = new ethers.Contract(window.NFT_LOAN_ADDRESS, window.NFT_LOAN_ABI, window.web3.signer);
       nftLoadMyLoans();
+      nftLoadEscrowVault();
       // Auto-fill and search when wallet connects
       const inp = document.getElementById('nft-contract-addr');
       if (inp && !inp.value && window.DAATFI_NFT_ADDRESS) inp.value = window.DAATFI_NFT_ADDRESS;
@@ -828,4 +908,5 @@ window.nftCancelLoan         = nftCancelLoan;
 window.nftClaimDefault       = nftClaimDefault;
 window.nftViewDetails        = nftViewDetails;
 window.nftLoadMyLoans        = nftLoadMyLoans;
+window.nftLoadEscrowVault    = nftLoadEscrowVault;
 window._nftUpdateLoanPreview   = _nftUpdateLoanPreview;
