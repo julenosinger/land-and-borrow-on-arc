@@ -431,26 +431,37 @@ function nftSelectNFT(address, tokenId, meta) {
   _nftUpdateLoanPreview();
 }
 
-// ── Live loan preview ─────────────────────────────────────────────────────────
+// ── Fixed loan constants (v4) ─────────────────────────────────────────────────
+const NFT_FIXED_LOAN_USDC   = 5;        // 5 USDC
+const NFT_INTEREST_PCT      = 7;        // 7%
+const NFT_PLATFORM_FEE_PCT  = 2;        // 2%
+const NFT_INTEREST_BPS      = 700;      // 700 bps
+const NFT_FIXED_LOAN_RAW    = 5e6;      // 5 USDC in 6-decimal units
+
+// ── Live loan preview (v4: fixed amounts) ─────────────────────────────────────
 function _nftUpdateLoanPreview() {
-  const amt   = parseFloat(document.getElementById('nft-loan-amount')?.value || 0);
-  const rate  = parseFloat(document.getElementById('nft-interest-rate')?.value || 0);
-  const dur   = parseFloat(document.getElementById('nft-duration-days')?.value || 0);
-  const prev  = document.getElementById('nft-loan-preview');
+  const dur  = parseFloat(document.getElementById('nft-duration-days')?.value || 0);
+  const prev = document.getElementById('nft-loan-preview');
   if (!prev) return;
-  if (!amt || !rate || !dur) { prev.style.display = 'none'; return; }
-  const interest   = (amt * rate) / 100;
-  const repayment  = amt + interest;
+  if (!dur || dur < 1) { prev.style.display = 'none'; return; }
+
+  const principal   = NFT_FIXED_LOAN_USDC;
+  const interest    = (principal * NFT_INTEREST_PCT) / 100;       // 0.35
+  const platformFee = (principal * NFT_PLATFORM_FEE_PCT) / 100;   // 0.10
+  const repayment   = principal + interest + platformFee;           // 5.45
+
   prev.style.display = 'block';
   prev.innerHTML = `
-    <div class="nft-preview-row"><span>Loan Amount</span><strong>${amt.toFixed(2)} USDC</strong></div>
-    <div class="nft-preview-row"><span>Interest (${rate}%)</span><strong>+${interest.toFixed(2)} USDC</strong></div>
-    <div class="nft-preview-row nft-preview-total"><span>Repayment Due</span><strong>${repayment.toFixed(2)} USDC</strong></div>
+    <div class="nft-preview-row"><span>Loan Amount</span><strong>${principal.toFixed(2)} USDC</strong></div>
+    <div class="nft-preview-row"><span>Interest (${NFT_INTEREST_PCT}%)</span><strong>+${interest.toFixed(2)} USDC</strong></div>
+    <div class="nft-preview-row"><span>Platform Fee (${NFT_PLATFORM_FEE_PCT}%)</span><strong>+${platformFee.toFixed(2)} USDC</strong></div>
+    <div class="nft-preview-row nft-preview-total"><span>Total Repayment</span><strong>${repayment.toFixed(2)} USDC</strong></div>
     <div class="nft-preview-row"><span>Duration</span><strong>${dur} day${dur !== 1 ? 's' : ''}</strong></div>
+    <div class="nft-preview-row" style="font-size:11px;color:var(--text-muted);"><span>Fee split</span><span>Pool receives ${(principal + interest).toFixed(2)} · Platform ${platformFee.toFixed(2)}</span></div>
   `;
 }
 
-// ── Submit loan request ───────────────────────────────────────────────────────
+// ── Submit loan request (v4: fixed 5 USDC, 7% + 2%) ─────────────────────────
 async function nftSubmitLoanRequest() {
   if (!_selectedNFT) { _nftToast('Select an NFT first.', 'warning'); return; }
 
@@ -458,21 +469,21 @@ async function nftSubmitLoanRequest() {
     _nftToast('Connect your wallet first.', 'warning'); return;
   }
 
-  const amtRaw  = document.getElementById('nft-loan-amount')?.value?.trim();
-  const rateRaw = document.getElementById('nft-interest-rate')?.value?.trim();
-  const durRaw  = document.getElementById('nft-duration-days')?.value?.trim();
+  const durRaw = document.getElementById('nft-duration-days')?.value?.trim();
+  if (!durRaw || isNaN(durRaw) || Number(durRaw) < 1) {
+    _nftToast('Duration must be at least 1 day.', 'warning'); return;
+  }
 
-  if (!amtRaw || isNaN(amtRaw) || Number(amtRaw) <= 0)  { _nftToast('Enter a valid loan amount.', 'warning'); return; }
-  if (!rateRaw || isNaN(rateRaw) || Number(rateRaw) < 0) { _nftToast('Enter a valid interest rate.', 'warning'); return; }
-  if (!durRaw  || isNaN(durRaw)  || Number(durRaw) < 1)  { _nftToast('Duration must be at least 1 day.', 'warning'); return; }
+  // Fixed values
+  const loanAmt     = NFT_FIXED_LOAN_RAW;        // 5e6
+  const interestBps = NFT_INTEREST_BPS;           // 700
+  const duration    = Math.round(Number(durRaw));
 
-  const loanAmt   = Math.round(Number(amtRaw) * 1e6);  // USDC 6 decimals
-  const interestBps = Math.round(Number(rateRaw) * 100); // % → bps
-  const duration   = Math.round(Number(durRaw));
+  const interest    = (NFT_FIXED_LOAN_USDC * NFT_INTEREST_PCT) / 100;
+  const platformFee = (NFT_FIXED_LOAN_USDC * NFT_PLATFORM_FEE_PCT) / 100;
+  const repayment   = (NFT_FIXED_LOAN_USDC + interest + platformFee).toFixed(2);
 
-  const repayment  = (Number(amtRaw) + (Number(amtRaw) * Number(rateRaw) / 100)).toFixed(2);
-
-  // Confirmation modal — use title + content format expected by showModal()
+  // Confirmation modal
   _nftShowModal(`
     <div style="padding:4px 0;">
       <div class="nft-confirm-header">
@@ -484,11 +495,16 @@ async function nftSubmitLoanRequest() {
           </div>
         </div>
         <div class="nft-confirm-details">
-          <div class="nft-preview-row"><span>Loan Amount</span><strong>${Number(amtRaw).toFixed(2)} USDC</strong></div>
-          <div class="nft-preview-row"><span>Interest Rate</span><strong>${rateRaw}% (${interestBps} bps)</strong></div>
+          <div class="nft-preview-row"><span>Loan Amount</span><strong>${NFT_FIXED_LOAN_USDC.toFixed(2)} USDC (fixed)</strong></div>
+          <div class="nft-preview-row"><span>Interest Rate</span><strong>${NFT_INTEREST_PCT}% (fixed)</strong></div>
+          <div class="nft-preview-row"><span>Platform Fee</span><strong>${NFT_PLATFORM_FEE_PCT}% (fixed)</strong></div>
           <div class="nft-preview-row"><span>Duration</span><strong>${duration} days</strong></div>
-          <div class="nft-preview-row nft-preview-total"><span>Repayment</span><strong>${repayment} USDC</strong></div>
+          <div class="nft-preview-row nft-preview-total"><span>Total Repayment</span><strong>${repayment} USDC</strong></div>
         </div>
+      </div>
+      <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+        <i class="fa-solid fa-circle-info"></i>
+        <strong>Fixed rules:</strong> Loan amount: 5 USDC · Interest: 7% · Platform fee: 2% · Only one active loan allowed
       </div>
       <div class="nft-confirm-warning">
         <i class="fa-solid fa-lock"></i>
@@ -599,6 +615,8 @@ async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
               <div class="nft-preview-row"><span>Tx Hash</span><code style="font-size:11px;">${receipt.transactionHash.slice(0,20)}…</code></div>
               <div class="nft-preview-row"><span>Block</span><strong>${receipt.blockNumber}</strong></div>
               <div class="nft-preview-row"><span>Status</span><strong>${poolFunded ? '⚡ Active (Pool-funded)' : '⏳ Requested'}</strong></div>
+              <div class="nft-preview-row"><span>Loan Amount</span><strong>5.00 USDC (fixed)</strong></div>
+              <div class="nft-preview-row"><span>Total Repayment</span><strong>5.45 USDC (7% + 2%)</strong></div>
             </div>
             <a href="${window.ARC_EXPLORER || 'https://testnet.arcscan.app'}/tx/${receipt.transactionHash}" target="_blank" class="btn btn-secondary btn-sm" style="margin-bottom:8px;display:inline-block;">
               <i class="fa-solid fa-arrow-up-right-from-square"></i> View on Explorer

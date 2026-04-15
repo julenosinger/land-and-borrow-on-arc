@@ -243,7 +243,7 @@ app.get('/', (c) => {
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
   <!-- Styles -->
-  <link rel="stylesheet" href="/static/style.css?v=20260415h" />
+  <link rel="stylesheet" href="/static/style.css?v=20260415i" />
   <!-- Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" crossorigin="anonymous" />
 
@@ -1837,24 +1837,39 @@ app.get('/', (c) => {
         <div id="nft-loan-form-panel" class="card card-lg" style="display:none;margin-top:16px;">
           <div class="card-title"><i class="fa-solid fa-pen-to-square text-green"></i>Loan Request</div>
 
+          <!-- Fixed-rules info banner -->
+          <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;">
+            <div style="font-weight:700;margin-bottom:6px;color:var(--accent-primary);"><i class="fa-solid fa-circle-info"></i> Fixed Loan Rules</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;color:var(--text-secondary);">
+              <span>💰 Loan amount: <strong style="color:var(--text-primary);">5 USDC (fixed)</strong></span>
+              <span>📈 Interest: <strong style="color:var(--text-primary);">7% (fixed)</strong></span>
+              <span>🏛️ Platform fee: <strong style="color:var(--text-primary);">2% (fixed)</strong></span>
+              <span>🚫 <strong style="color:var(--text-primary);">Only one active loan allowed</strong></span>
+            </div>
+          </div>
+
           <!-- Selected NFT preview -->
           <div id="nft-selected-preview" class="nft-selected-preview"></div>
 
-          <div class="grid-2" style="gap:16px;margin-top:16px;">
+          <!-- Loan amount & interest are fixed — only duration is user-selectable -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
             <div class="form-group">
-              <label class="form-label">Loan Amount (USDC) <span class="required">*</span></label>
+              <label class="form-label">Loan Amount (USDC)</label>
               <div class="input-group">
                 <span class="input-icon" style="font-size:13px;font-weight:600;">$</span>
-                <input id="nft-loan-amount" class="form-control" type="number" min="1" step="0.01" placeholder="e.g. 100" oninput="window._nftUpdateLoanPreview&&_nftUpdateLoanPreview()" />
+                <input id="nft-loan-amount" class="form-control" type="number" value="5" readonly
+                  style="background:var(--bg-tertiary);cursor:not-allowed;opacity:0.75;" />
               </div>
+              <span class="field-hint" style="color:var(--accent-primary);">Fixed at 5 USDC</span>
             </div>
             <div class="form-group">
-              <label class="form-label">Interest Rate (%) <span class="required">*</span></label>
+              <label class="form-label">Interest Rate (%)</label>
               <div class="input-group">
                 <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                <input id="nft-interest-rate" class="form-control" type="number" min="0" max="50" step="0.1" placeholder="e.g. 5" oninput="window._nftUpdateLoanPreview&&_nftUpdateLoanPreview()" />
+                <input id="nft-interest-rate" class="form-control" type="number" value="7" readonly
+                  style="background:var(--bg-tertiary);cursor:not-allowed;opacity:0.75;" />
               </div>
-              <span class="field-hint">Max 50%</span>
+              <span class="field-hint" style="color:var(--accent-primary);">Fixed at 7% + 2% fee</span>
             </div>
           </div>
 
@@ -2333,17 +2348,17 @@ app.get('/', (c) => {
 
 <!-- ════ SCRIPTS ════ -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="/static/contractABI.js?v=20260415h"></script>
-<script src="/static/web3Manager.js?v=20260415h"></script>
-<script src="/static/ui.js?v=20260415h"></script>
-<script src="/static/chatbot.js?v=20260415h"></script>
-<script src="/static/marketplace.js?v=20260415h"></script>
-<script src="/static/receipt.js?v=20260415h"></script>
-<script src="/static/docs-viewer.js?v=20260415h"></script>
-<script src="/static/security.js?v=20260415h"></script>
-<script src="/static/nftLoans.js?v=20260415h"></script>
-<script src="/static/liquidityPool.js?v=20260415h"></script>
-<script src="/static/app.js?v=20260415h"></script>
+<script src="/static/contractABI.js?v=20260415i"></script>
+<script src="/static/web3Manager.js?v=20260415i"></script>
+<script src="/static/ui.js?v=20260415i"></script>
+<script src="/static/chatbot.js?v=20260415i"></script>
+<script src="/static/marketplace.js?v=20260415i"></script>
+<script src="/static/receipt.js?v=20260415i"></script>
+<script src="/static/docs-viewer.js?v=20260415i"></script>
+<script src="/static/security.js?v=20260415i"></script>
+<script src="/static/nftLoans.js?v=20260415i"></script>
+<script src="/static/liquidityPool.js?v=20260415i"></script>
+<script src="/static/app.js?v=20260415i"></script>
 </body>
 </html>`)
 })
