@@ -410,7 +410,7 @@ window.DAATFI_NFT_ABI     = DAATFI_NFT_ABI;
 // ── DaatFI Liquidity Pool ──────────────────────────────────────────────────────
 // DEPLOYED on Arc Testnet — address set after deploy
 // Replace LIQUIDITY_POOL_ADDRESS_HERE with the actual deployed address
-const LIQUIDITY_POOL_ADDRESS = "LIQUIDITY_POOL_ADDRESS_HERE";
+const LIQUIDITY_POOL_ADDRESS = "0xB62881e216be07aa6EA8dBb6a6912beA0806c253";
 
 const LIQUIDITY_POOL_ABI = [
   {"inputs":[{"internalType":"address","name":"_usdc","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},

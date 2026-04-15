@@ -243,7 +243,7 @@ app.get('/', (c) => {
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
   <!-- Styles -->
-  <link rel="stylesheet" href="/static/style.css?v=20260415e" />
+  <link rel="stylesheet" href="/static/style.css?v=20260415f" />
   <!-- Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" crossorigin="anonymous" />
 
@@ -398,17 +398,17 @@ app.get('/', (c) => {
     <button class="nav-btn" data-page="payments" onclick="showPage('payments')">
       <i class="fa-solid fa-credit-card"></i> Payments
     </button>
-    <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
-      <i class="fa-solid fa-gear"></i> Settings
-    </button>
-    <button class="nav-btn" data-page="about" onclick="showPage('about')">
-      <i class="fa-solid fa-circle-info"></i> About Us
-    </button>
     <button class="nav-btn" data-page="nft-loans" onclick="showPage('nft-loans')">
       <i class="fa-solid fa-hexagon-nodes"></i> NFT Loans
     </button>
     <button class="nav-btn" data-page="liquidity-pool" onclick="showPage('liquidity-pool')">
       <i class="fa-solid fa-droplet"></i> Liquidity Pool
+    </button>
+    <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
+      <i class="fa-solid fa-gear"></i> Settings
+    </button>
+    <button class="nav-btn" data-page="about" onclick="showPage('about')">
+      <i class="fa-solid fa-circle-info"></i> About Us
     </button>
   </nav>
 
@@ -2333,17 +2333,17 @@ app.get('/', (c) => {
 
 <!-- ════ SCRIPTS ════ -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="/static/contractABI.js?v=20260415e"></script>
-<script src="/static/web3Manager.js?v=20260415e"></script>
-<script src="/static/ui.js?v=20260415e"></script>
-<script src="/static/chatbot.js?v=20260415e"></script>
-<script src="/static/marketplace.js?v=20260415e"></script>
-<script src="/static/receipt.js?v=20260415e"></script>
-<script src="/static/docs-viewer.js?v=20260415e"></script>
-<script src="/static/security.js?v=20260415e"></script>
-<script src="/static/nftLoans.js?v=20260415e"></script>
-<script src="/static/liquidityPool.js?v=20260415e"></script>
-<script src="/static/app.js?v=20260415e"></script>
+<script src="/static/contractABI.js?v=20260415f"></script>
+<script src="/static/web3Manager.js?v=20260415f"></script>
+<script src="/static/ui.js?v=20260415f"></script>
+<script src="/static/chatbot.js?v=20260415f"></script>
+<script src="/static/marketplace.js?v=20260415f"></script>
+<script src="/static/receipt.js?v=20260415f"></script>
+<script src="/static/docs-viewer.js?v=20260415f"></script>
+<script src="/static/security.js?v=20260415f"></script>
+<script src="/static/nftLoans.js?v=20260415f"></script>
+<script src="/static/liquidityPool.js?v=20260415f"></script>
+<script src="/static/app.js?v=20260415f"></script>
 </body>
 </html>`)
 })
