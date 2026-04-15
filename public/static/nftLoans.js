@@ -164,56 +164,85 @@ function _parseDataUri(uri) {
   } catch { return null; }
 }
 
-async function _fetchNFTMeta(nftAddr, tokenId, provider) {
+async function _fetchNFTMeta(nftAddr, tokenId, _unused) {
   const key = `${nftAddr}:${tokenId}`;
   if (_nftCache[key]) return _nftCache[key];
-  try {
-    // Always use StaticJsonRpcProvider — skips network auto-detection (no eth_chainId call).
-    let prov = new ethers.providers.StaticJsonRpcProvider(window.ARC_RPC_URL, { chainId: 5042002, name: "arc-testnet" });
-    const nft = new ethers.Contract(nftAddr, window.ERC721_ABI, prov);
-    let collectionName = 'Unknown Collection';
-    let tokenName      = `Token #${tokenId}`;
-    let image          = null;
 
-    try { collectionName = await nft.name(); } catch {}
+  const RPC = window.ARC_RPC_URL || 'https://rpc.testnet.arc.network';
+  const addr = nftAddr.toLowerCase();
+
+  // Raw RPC call helper — no ethers, no ABI needed
+  async function rpcEthCall(data) {
+    try {
+      const res = await fetch(RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc:'2.0', method:'eth_call', params:[{ to: addr, data }, 'latest'], id: Date.now() })
+      });
+      const json = await res.json();
+      return json.result || null;
+    } catch { return null; }
+  }
+
+  // Decode ABI-encoded string response (offset + length + utf8 bytes)
+  function decodeString(hex) {
+    try {
+      if (!hex || hex === '0x') return null;
+      const clean = hex.slice(2);
+      const offset = parseInt(clean.slice(0, 64), 16) * 2;
+      const len    = parseInt(clean.slice(offset, offset + 64), 16);
+      let str = '';
+      for (let i = 0; i < len; i++) {
+        str += String.fromCharCode(parseInt(clean.slice(offset + 64 + i * 2, offset + 64 + i * 2 + 2), 16));
+      }
+      return str;
+    } catch { return null; }
+  }
+
+  let collectionName = 'Unknown Collection';
+  let tokenName      = `Token #${tokenId}`;
+  let image          = null;
+
+  try {
+    // name() — selector 0x06fdde03
+    const nameHex = await rpcEthCall('0x06fdde03');
+    if (nameHex) collectionName = decodeString(nameHex) || collectionName;
     tokenName = `${collectionName} #${tokenId}`;
 
-    // try tokenURI → resolve JSON
-    try {
-      let uri = await nft.tokenURI(tokenId);
-
-      let meta = null;
-
-      if (uri.startsWith('data:')) {
-        // On-chain data URI — parse directly without fetch()
-        meta = _parseDataUri(uri);
-      } else {
-        // Remote URI (ipfs:// or https://)
-        if (uri.startsWith('ipfs://')) uri = 'https://gateway.pinata.cloud/ipfs/' + uri.slice(7);
-        const resp = await Promise.race([
-          fetch(uri),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
-        ]);
-        meta = await resp.json();
-      }
-
-      if (meta) {
-        if (meta.name)  tokenName = decodeURIComponent(meta.name);
-        if (meta.image) {
-          let img = meta.image;
-          if (img.startsWith('ipfs://')) img = 'https://gateway.pinata.cloud/ipfs/' + img.slice(7);
-          // Keep data: URIs (svg, png, etc.) as-is — browsers render them fine
-          image = img;
+    // tokenURI(uint256) — selector 0xc87b56dd + tokenId padded
+    const tidHex = parseInt(tokenId).toString(16).padStart(64, '0');
+    const uriHex = await rpcEthCall('0xc87b56dd' + tidHex);
+    if (uriHex) {
+      let uri = decodeString(uriHex);
+      if (uri) {
+        let meta = null;
+        if (uri.startsWith('data:')) {
+          meta = _parseDataUri(uri);
+        } else {
+          if (uri.startsWith('ipfs://')) uri = 'https://gateway.pinata.cloud/ipfs/' + uri.slice(7);
+          try {
+            const resp = await Promise.race([
+              fetch(uri),
+              new Promise((_, rej) => setTimeout(() => rej(), 6000))
+            ]);
+            meta = await resp.json();
+          } catch {}
+        }
+        if (meta) {
+          if (meta.name)  tokenName = decodeURIComponent(meta.name);
+          if (meta.image) {
+            let img = meta.image;
+            if (img.startsWith('ipfs://')) img = 'https://gateway.pinata.cloud/ipfs/' + img.slice(7);
+            image = img;
+          }
         }
       }
-    } catch {}
+    }
+  } catch {}
 
-    const result = { name: tokenName, collection: collectionName, image };
-    _nftCache[key] = result;
-    return result;
-  } catch(e) {
-    return { name: `Token #${tokenId}`, collection: 'Unknown Collection', image: null };
-  }
+  const result = { name: tokenName, collection: collectionName, image };
+  _nftCache[key] = result;
+  return result;
 }
 
 // ── NFT Image placeholder ─────────────────────────────────────────────────────
@@ -248,7 +277,8 @@ async function nftFetchWalletNFTs() {
     rawInput = window.DAATFI_NFT_ADDRESS;
     if (inputEl) inputEl.value = rawInput;
   }
-  if (!rawInput || !ethers.utils.isAddress(rawInput)) {
+  // Basic address validation without ethers
+  if (!rawInput || !/^0x[0-9a-fA-F]{40}$/.test(rawInput)) {
     if (loadEl) loadEl.style.display = 'none';
     if (emptyEl) {
       emptyEl.style.display = 'block';
@@ -261,51 +291,91 @@ async function nftFetchWalletNFTs() {
   if (emptyEl) emptyEl.style.display = 'none';
   container.innerHTML = '';
 
-  const nftContractAddr = rawInput;
-  const addr            = window.web3.address;
+  const nftContractAddr = rawInput.toLowerCase();
+  const addr            = window.web3.address.toLowerCase();
+  const RPC             = window.ARC_RPC_URL || 'https://rpc.testnet.arc.network';
+
+  // ── Direct RPC call — no ethers provider, no ABI dependency ──────────────
+  async function rpcCall(method, params) {
+    const res = await fetch(RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method, params, id: Date.now() })
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message || JSON.stringify(json.error));
+    return json.result;
+  }
+
+  // Encode eth_call data manually (no ethers ABI needed)
+  function encodeCall(sig4bytes, ...args32) {
+    return sig4bytes + args32.map(a => a.toLowerCase().replace('0x','').padStart(64,'0')).join('');
+  }
+  function decodeUint(hex) { return hex ? parseInt(hex, 16) : 0; }
+  function decodeUintArray(hex) {
+    if (!hex || hex === '0x') return [];
+    const clean = hex.slice(2); // remove 0x
+    // First 32 bytes = offset (skip), next 32 bytes = length, then elements
+    const len = parseInt(clean.slice(64, 128), 16);
+    const result = [];
+    for (let i = 0; i < len; i++) {
+      result.push(parseInt(clean.slice(128 + i * 64, 128 + (i + 1) * 64), 16).toString());
+    }
+    return result;
+  }
 
   try {
-    // Always use StaticJsonRpcProvider — skips network auto-detection (no eth_chainId call).
-    // Web3Provider can stall on network detection in some wallet states.
-    const provider = new ethers.providers.StaticJsonRpcProvider(window.ARC_RPC_URL, { chainId: 5042002, name: "arc-testnet" });
-    const nft = new ethers.Contract(nftContractAddr, window.ERC721_ABI, provider);
-
-    let bal;
+    // balanceOf(address) — selector 0x70a08231
+    let balHex;
     try {
-      bal = await nft.balanceOf(addr);
+      balHex = await rpcCall('eth_call', [
+        { to: nftContractAddr, data: encodeCall('0x70a08231', addr) },
+        'latest'
+      ]);
     } catch(e) {
-      console.error('[NFT balanceOf error]', e);
-      // Show the real error to help debug
-      const realMsg = e.reason || e.data?.message || e.message || String(e);
-      throw new Error('balanceOf failed: ' + realMsg);
+      throw new Error('Contract não responde a balanceOf: ' + e.message);
     }
 
-    const count = Math.min(Number(bal), 50);
+    const count = Math.min(decodeUint(balHex), 50);
 
     if (loadEl) loadEl.style.display = 'none';
 
     if (count === 0) {
-      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>Your wallet holds no NFTs in this contract.<br><small style="color:var(--text-muted);">Use the <strong>Mint NFT</strong> button above to get a DaatFI NFT on Arc Testnet.</small>'; }
+      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>Sua wallet não tem NFTs neste contrato.<br><small style="color:var(--text-muted);">Use o botão <strong>Mint NFT</strong> acima para obter um DaatFI NFT no Arc Testnet.</small>'; }
       return;
     }
 
+    // tokensOfOwner(address) — selector 0x8462151c
     let tokenIds = [];
     try {
-      const tids = await nft.tokensOfOwner(addr);
-      tokenIds = tids.map(t => t.toString());
-    } catch {
+      const tidsHex = await rpcCall('eth_call', [
+        { to: nftContractAddr, data: encodeCall('0x8462151c', addr) },
+        'latest'
+      ]);
+      tokenIds = decodeUintArray(tidsHex);
+    } catch {}
+
+    // Fallback: tokenOfOwnerByIndex(address, index) — selector 0x2f745c59
+    if (tokenIds.length === 0) {
       for (let i = 0; i < count; i++) {
-        try { tokenIds.push((await nft.tokenOfOwnerByIndex(addr, i)).toString()); } catch {}
+        try {
+          const idxHex = i.toString(16).padStart(64, '0');
+          const tHex = await rpcCall('eth_call', [
+            { to: nftContractAddr, data: '0x2f745c59' + addr.replace('0x','').padStart(64,'0') + idxHex },
+            'latest'
+          ]);
+          tokenIds.push(decodeUint(tHex).toString());
+        } catch {}
       }
     }
 
     if (tokenIds.length === 0) {
-      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>Your wallet holds no NFTs in this contract.'; }
+      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = '<i class="fa-solid fa-box-open"></i><br>Nenhum NFT encontrado nesta wallet.'; }
       return;
     }
 
     for (const tokenId of tokenIds) {
-      const meta = await _fetchNFTMeta(nftContractAddr, tokenId, provider);
+      const meta = await _fetchNFTMeta(nftContractAddr, tokenId, null);
       const card = document.createElement('div');
       card.className = 'nft-card' + (_selectedNFT?.tokenId === tokenId && _selectedNFT?.address === nftContractAddr ? ' nft-card-selected' : '');
       card.dataset.addr    = nftContractAddr;
@@ -325,7 +395,8 @@ async function nftFetchWalletNFTs() {
 
   } catch(e) {
     if (loadEl) loadEl.style.display = 'none';
-    if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><br>Error: ${e.message}`; }
+    if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><br>Erro: ${e.message}`; }
+    console.error('[NFTFetch]', e);
   }
 }
 
