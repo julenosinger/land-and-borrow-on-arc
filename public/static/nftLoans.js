@@ -518,7 +518,7 @@ async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
     await approveTx.wait();
     _nftToast('NFT approved ✓', 'success');
 
-    // Step 2: Create loan request
+    // Step 2: Create loan request (locks NFT into escrow)
     _nftToast('Step 2/2: Creating loan request and locking NFT…', 'info');
     const tx = await c.createLoanRequest(
       _selectedNFT.address,
@@ -541,21 +541,64 @@ async function nftExecuteLoanRequest(loanAmt, duration, interestBps) {
       }
     } catch {}
 
+    // ── Step 3: Auto-fund from Liquidity Pool ──────────────────────────────
+    // Attempt instant funding if pool has liquidity. Failure is safe (loan stays REQUESTED).
+    let poolFunded = false;
+    const poolAddr = window.LIQUIDITY_POOL_ADDRESS;
+
+    if (poolAddr && loanId !== '?') {
+      try {
+        _nftToast('Funding from pool…', 'info');
+
+        const autoFundTx = await c.autoFundFromPool(loanId, poolAddr);
+        const autoFundReceipt = await autoFundTx.wait();
+
+        // Check if LoanAutoFunded event was emitted (means pool had liquidity)
+        const iface2 = new ethers.utils.Interface(window.NFT_LOAN_ABI);
+        for (const log of autoFundReceipt.logs) {
+          try {
+            const parsed = iface2.parseLog(log);
+            if (parsed.name === 'LoanAutoFunded') { poolFunded = true; break; }
+          } catch {}
+        }
+      } catch (poolErr) {
+        // Pool funding failed — safe fallback, loan stays REQUESTED
+        console.warn('[NFTLoan] autoFundFromPool failed (fallback to REQUESTED):', poolErr.reason || poolErr.message);
+      }
+    }
+    // ── End auto-fund ──────────────────────────────────────────────────────
+
     if (window.closeModal) window.closeModal();
-    _nftToast(`✅ NFT locked! Loan request #${loanId} created.`, 'success');
+
+    if (poolFunded) {
+      _nftToast(`✅ Loan #${loanId} instantly funded from Liquidity Pool!`, 'success');
+    } else {
+      _nftToast(`✅ NFT locked! Loan request #${loanId} created.`, 'success');
+    }
 
     // Show success modal
     if (window.showModal) {
       window.showModal({
-        title: '🔒 Loan Request Created!',
+        title: poolFunded ? '⚡ Loan Funded Instantly!' : '🔒 Loan Request Created!',
         content: `
           <div style="text-align:center;padding:8px 0;">
+            ${poolFunded
+              ? `<div style="background:rgba(46,213,115,0.1);border:1px solid rgba(46,213,115,0.3);border-radius:10px;padding:10px;margin-bottom:14px;font-size:13px;color:#2ed573;">
+                   <i class="fa-solid fa-bolt"></i> <strong>Loan funded instantly from Liquidity Pool</strong><br>
+                   USDC has been transferred directly to your wallet.
+                 </div>`
+              : `<div style="background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:10px;padding:10px;margin-bottom:14px;font-size:13px;color:#ffc107;">
+                   <i class="fa-solid fa-clock"></i> <strong>Waiting for liquidity</strong><br>
+                   Pool had insufficient funds. Loan is awaiting a lender.
+                 </div>`
+            }
             <p style="color:var(--text-secondary);font-size:14px;margin:0 0 16px;">
-              Your NFT is now locked in escrow. Loan ID: <strong>#${loanId}</strong>
+              Your NFT is locked in escrow. Loan ID: <strong>#${loanId}</strong>
             </p>
             <div style="background:var(--bg-tertiary);border-radius:10px;padding:12px;margin-bottom:16px;text-align:left;">
               <div class="nft-preview-row"><span>Tx Hash</span><code style="font-size:11px;">${receipt.transactionHash.slice(0,20)}…</code></div>
               <div class="nft-preview-row"><span>Block</span><strong>${receipt.blockNumber}</strong></div>
+              <div class="nft-preview-row"><span>Status</span><strong>${poolFunded ? '⚡ Active (Pool-funded)' : '⏳ Requested'}</strong></div>
             </div>
             <a href="${window.ARC_EXPLORER || 'https://testnet.arcscan.app'}/tx/${receipt.transactionHash}" target="_blank" class="btn btn-secondary btn-sm" style="margin-bottom:8px;display:inline-block;">
               <i class="fa-solid fa-arrow-up-right-from-square"></i> View on Explorer

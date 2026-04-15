@@ -314,7 +314,8 @@ window.LOAN_STATUS        = LOAN_STATUS;
 window.COLLATERAL_TYPE    = COLLATERAL_TYPE;
 
 // ── NFTLoanManager v2 — Reputation System — deployed Arc Testnet 2026 ─────────
-const NFT_LOAN_ADDRESS = "0x0bAF758cc03C0d3fBe0e0C9b7342777282c76ee8";
+// NFTLoanManager v3 — auto-fund from Liquidity Pool
+const NFT_LOAN_ADDRESS = "0x1F1dD5A7342Ed67c621d60711Ce90020C4058b0E";
 
 const NFT_LOAN_ABI = [
   {"inputs":[{"internalType":"address","name":"_usdcToken","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
@@ -347,7 +348,12 @@ const NFT_LOAN_ABI = [
   {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"}],"name":"repayLoan","outputs":[],"stateMutability":"nonpayable","type":"function"},
   {"inputs":[{"internalType":"address","name":"wallet","type":"address"}],"name":"reputationScore","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"}],"name":"timeRemaining","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-  {"inputs":[],"name":"usdcToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
+  {"inputs":[],"name":"usdcToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"},{"internalType":"address","name":"poolAddress","type":"address"}],"name":"autoFundFromPool","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"}],"name":"getPoolFunder","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"poolFundedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"loanId","type":"uint256"},{"indexed":true,"internalType":"address","name":"borrower","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"address","name":"poolAddress","type":"address"}],"name":"LoanAutoFunded","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"loanId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"fundedAt","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"dueDate","type":"uint256"}],"name":"LoanActivated","type":"event"}
 ];
 
 // Minimal ERC-721 ABI for NFT interactions
