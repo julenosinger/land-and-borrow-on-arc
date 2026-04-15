@@ -124,7 +124,7 @@ function _initNFTContracts() {
     // Use the already-connected Web3Provider when available; fall back to JsonRpc for read-only
     const prov = (window.web3 && window.web3.provider)
       ? window.web3.provider
-      : new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+      : new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL, { chainId: 5042002, name: "arc-testnet" });
     _nftReadOnly = new ethers.Contract(window.NFT_LOAN_ADDRESS, window.NFT_LOAN_ABI, prov);
     if (window.web3 && window.web3.signer) {
       _nftContract = new ethers.Contract(window.NFT_LOAN_ADDRESS, window.NFT_LOAN_ABI, window.web3.signer);
@@ -169,7 +169,7 @@ async function _fetchNFTMeta(nftAddr, tokenId, provider) {
   if (_nftCache[key]) return _nftCache[key];
   try {
     // Always use JsonRpcProvider for read-only metadata calls — avoids Web3Provider stalls.
-    let prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    let prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL, { chainId: 5042002, name: "arc-testnet" });
     const nft = new ethers.Contract(nftAddr, window.ERC721_ABI, prov);
     let collectionName = 'Unknown Collection';
     let tokenName      = `Token #${tokenId}`;
@@ -267,7 +267,7 @@ async function nftFetchWalletNFTs() {
   try {
     // Always use JsonRpcProvider for read-only NFT calls — reliable on Arc Testnet.
     // Web3Provider can stall on network detection in some wallet states.
-    const provider = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    const provider = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL, { chainId: 5042002, name: "arc-testnet" });
     const nft = new ethers.Contract(nftContractAddr, window.ERC721_ABI, provider);
 
     let bal;
@@ -275,7 +275,9 @@ async function nftFetchWalletNFTs() {
       bal = await nft.balanceOf(addr);
     } catch(e) {
       console.error('[NFT balanceOf error]', e);
-      throw new Error('Contract does not respond to balanceOf. Make sure it is a valid ERC-721 on Arc Testnet.');
+      // Show the real error to help debug
+      const realMsg = e.reason || e.data?.message || e.message || String(e);
+      throw new Error('balanceOf failed: ' + realMsg);
     }
 
     const count = Math.min(Number(bal), 50);
@@ -528,7 +530,7 @@ async function nftLoadMyLoans() {
   try {
     const c    = _getReadOnlyNFT();
     const addr = window.web3.address;
-    const prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    const prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL, { chainId: 5042002, name: "arc-testnet" });
 
     // Get borrower AND lender loan IDs
     const [borrowerIds, lenderIds] = await Promise.all([
@@ -803,7 +805,7 @@ async function nftLoadEscrowVault() {
   container.innerHTML = '<div class="nft-loans-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading escrow vault…</div>';
 
   try {
-    const prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL);
+    const prov = new ethers.providers.JsonRpcProvider(window.ARC_RPC_URL, { chainId: 5042002, name: "arc-testnet" });
     const c    = _getReadOnlyNFT();
     const addr = window.web3.address;
 
