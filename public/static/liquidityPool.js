@@ -160,7 +160,7 @@
   function _setPlaceholders() {
     ['pool-total-liquidity','pool-user-balance','pool-user-shares','pool-apy'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.textContent = 'Pool não implantado';
+      if (el) el.textContent = 'Pool not deployed';
     });
   }
 
@@ -213,11 +213,11 @@
   // ── Deposit ────────────────────────────────────────────────
   window.poolDeposit = async function() {
     _getPoolAddr();
-    if (!POOL_ADDR) { _showToast('Pool ainda não implantado na testnet.', 'error'); return; }
-    if (!window.web3 || !window.web3.address) { _showToast('Conecte sua carteira primeiro.', 'error'); return; }
+    if (!POOL_ADDR) { _showToast('Pool not yet deployed on testnet.', 'error'); return; }
+    if (!window.web3 || !window.web3.address) { _showToast('Please connect your wallet first.', 'error'); return; }
 
     const amt = parseFloat(document.getElementById('pool-deposit-amount').value);
-    if (!amt || amt <= 0) { _showToast('Informe um valor válido.', 'error'); return; }
+    if (!amt || amt <= 0) { _showToast('Please enter a valid amount.', 'error'); return; }
 
     const amtRaw = BigInt(Math.round(amt * 1e6));
     const btn = document.querySelector('.btn-deposit');
@@ -229,13 +229,13 @@
       const signer   = new ethers.providers.Web3Provider(window.ethereum).getSigner();
 
       // 1) Approve USDC
-      _showToast('Aprovando USDC...', 'info');
+      _showToast('Approving USDC...', 'info');
       const usdcABI = ['function approve(address spender, uint256 amount) returns (bool)',
                        'function allowance(address owner, address spender) view returns (uint256)'];
       const usdcContract = new ethers.Contract(USDC_ADDR, usdcABI, signer);
       const approveTx = await usdcContract.approve(POOL_ADDR, amtRaw.toString());
       await approveTx.wait();
-      _showToast('USDC aprovado. Depositando...', 'info');
+      _showToast('USDC approved. Depositing...', 'info');
 
       // 2) Deposit
       const poolABI = ['function deposit(uint256 amount)'];
@@ -243,13 +243,13 @@
       const depositTx = await pool.deposit(amtRaw.toString());
       const receipt = await depositTx.wait();
 
-      _showToast(`✅ Depósito de ${_fmt6(amtRaw)} USDC realizado! Tx: ${receipt.transactionHash.slice(0,10)}...`, 'success');
+      _showToast(`✅ Deposit of ${_fmt6(amtRaw)} USDC successful! Tx: ${receipt.transactionHash.slice(0,10)}...`, 'success');
       document.getElementById('pool-deposit-amount').value = '';
       document.getElementById('pool-deposit-preview').style.display = 'none';
       await poolLoadStats();
     } catch (e) {
       console.error('[Pool deposit error]', e);
-      _showToast('Erro ao depositar: ' + (e.reason || e.message || String(e)), 'error');
+      _showToast('Deposit error: ' + (e.reason || e.message || String(e)), 'error');
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-lock"></i> Aprovar & Depositar';
@@ -259,14 +259,14 @@
   // ── Withdraw ───────────────────────────────────────────────
   window.poolWithdraw = async function() {
     _getPoolAddr();
-    if (!POOL_ADDR) { _showToast('Pool ainda não implantado na testnet.', 'error'); return; }
-    if (!window.web3 || !window.web3.address) { _showToast('Conecte sua carteira primeiro.', 'error'); return; }
+    if (!POOL_ADDR) { _showToast('Pool not yet deployed on testnet.', 'error'); return; }
+    if (!window.web3 || !window.web3.address) { _showToast('Please connect your wallet first.', 'error'); return; }
 
     const sharesInput = parseFloat(document.getElementById('pool-withdraw-shares').value);
-    if (!sharesInput || sharesInput <= 0) { _showToast('Informe a quantidade de shares.', 'error'); return; }
+    if (!sharesInput || sharesInput <= 0) { _showToast('Please enter the share amount.', 'error'); return; }
 
     const sharesRaw = BigInt(Math.round(sharesInput * 1e6));
-    if (sharesRaw > _poolUserShares) { _showToast('Shares insuficientes.', 'error'); return; }
+    if (sharesRaw > _poolUserShares) { _showToast('Insufficient shares.', 'error'); return; }
 
     const btn = document.querySelector('.btn-withdraw');
     btn.disabled = true;
@@ -279,13 +279,13 @@
       const tx = await pool.withdraw(sharesRaw.toString());
       const receipt = await tx.wait();
 
-      _showToast(`✅ Saque realizado! Tx: ${receipt.transactionHash.slice(0,10)}...`, 'success');
+      _showToast(`✅ Withdrawal successful! Tx: ${receipt.transactionHash.slice(0,10)}...`, 'success');
       document.getElementById('pool-withdraw-shares').value = '';
       document.getElementById('pool-withdraw-preview').style.display = 'none';
       await poolLoadStats();
     } catch (e) {
       console.error('[Pool withdraw error]', e);
-      _showToast('Erro ao sacar: ' + (e.reason || e.message || String(e)), 'error');
+      _showToast('Withdrawal error: ' + (e.reason || e.message || String(e)), 'error');
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-unlock"></i> Sacar USDC';
@@ -295,15 +295,15 @@
   // ── Simulate Pool Funding (Testnet helper) ─────────────────
   window.poolSimulateFunding = async function() {
     _getPoolAddr();
-    if (!POOL_ADDR) { _showToast('Pool ainda não implantado. Deploy necessário primeiro.', 'error'); return; }
-    if (!window.web3 || !window.web3.address) { _showToast('Conecte sua carteira primeiro.', 'error'); return; }
+    if (!POOL_ADDR) { _showToast('Pool not yet deployed. Deploy required first.', 'error'); return; }
+    if (!window.web3 || !window.web3.address) { _showToast('Please connect your wallet first.', 'error'); return; }
 
-    _showToast('Simulando aporte de 100 USDC no pool...', 'info');
+    _showToast('Simulating 100 USDC pool deposit...', 'info');
 
     // This is just a regular deposit of 100 USDC labelled as "simulation"
     document.getElementById('pool-deposit-amount').value = '100';
     window.poolUpdateDepositPreview();
-    _showToast('Valor pré-preenchido como 100 USDC. Clique em "Aprovar & Depositar" para confirmar.', 'info');
+    _showToast('Amount pre-filled as 100 USDC. Click "Approve & Deposit" to confirm.', 'info');
   };
 
   // ── Load Active Pool Loans ─────────────────────────────────
@@ -313,15 +313,15 @@
     if (!container) return;
 
     if (!POOL_ADDR) {
-      container.innerHTML = '<div class="pool-empty-state"><i class="fa-solid fa-triangle-exclamation"></i><br>Pool não implantado ainda. Deploy necessário.</div>';
+      container.innerHTML = '<div class="pool-empty-state"><i class="fa-solid fa-triangle-exclamation"></i><br>Pool not deployed yet. Deploy required.</div>';
       return;
     }
     if (!window.web3 || !window.web3.address) {
-      container.innerHTML = '<div class="pool-empty-state"><i class="fa-solid fa-droplet-slash"></i><br>Conecte sua carteira para ver os empréstimos financiados pelo pool.</div>';
+      container.innerHTML = '<div class="pool-empty-state"><i class="fa-solid fa-droplet-slash"></i><br>Connect your wallet to view pool-funded loans.</div>';
       return;
     }
 
-    container.innerHTML = '<div class="pool-empty-state"><i class="fa-solid fa-spinner fa-spin"></i><br>Carregando...</div>';
+    container.innerHTML = '<div class="pool-empty-state"><i class="fa-solid fa-spinner fa-spin"></i><br>Loading...</div>';
 
     try {
       // We look at up to 50 loan IDs from the main loan contracts
@@ -330,11 +330,11 @@
       container.innerHTML = `
         <div class="pool-empty-state" style="font-size:0.82rem; line-height:1.8;">
           <i class="fa-solid fa-circle-info" style="color:#00c8ff;"></i><br>
-          Histórico de empréstimos financiados pelo pool disponível após o deploy na testnet.<br>
-          <small style="color:#666;">Os eventos <code>LoanFunded</code>, <code>LoanRepaid</code> e <code>LoanDefaulted</code> são emitidos no contrato.</small>
+          Pool-funded loan history available after testnet deploy.<br>
+          <small style="color:#666;">Events <code>LoanFunded</code>, <code>LoanRepaid</code> and <code>LoanDefaulted</code> are emitted by the contract.</small>
         </div>`;
     } catch (e) {
-      container.innerHTML = '<div class="pool-empty-state">Erro ao carregar: ' + (e.message || e) + '</div>';
+      container.innerHTML = '<div class="pool-empty-state">Error loading: ' + (e.message || e) + '</div>';
     }
   };
 

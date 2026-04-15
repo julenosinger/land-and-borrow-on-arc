@@ -243,7 +243,7 @@ app.get('/', (c) => {
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
   <!-- Styles -->
-  <link rel="stylesheet" href="/static/style.css?v=20260415f" />
+  <link rel="stylesheet" href="/static/style.css?v=20260415g" />
   <!-- Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" crossorigin="anonymous" />
 
@@ -1924,35 +1924,35 @@ app.get('/', (c) => {
   <!-- ════ LIQUIDITY POOL PAGE ════ -->
   <div class="page" id="page-liquidity-pool">
     <div class="section-title"><i class="fa-solid fa-droplet text-cyan" style="margin-right:8px;"></i>Liquidity Pool</div>
-    <div class="section-sub">Forneça liquidez USDC e ganhe rendimento proporcional. O pool financia automaticamente empréstimos NFT e Crypto na Arc Testnet.</div>
+    <div class="section-sub">Provide USDC liquidity and earn proportional yield. The pool automatically funds NFT and Crypto loans on Arc Testnet.</div>
 
     <!-- Info Banner -->
     <div class="pool-info-banner">
       <i class="fa-solid fa-circle-info"></i>
-      <span>Este pool é <strong>exclusivamente</strong> para financiar empréstimos NFT e Crypto na DaatFI. Nenhum outro contrato ou carteira pode sacar fundos sem autorização do owner.</span>
+      <span>This pool is <strong>exclusively</strong> for funding NFT and Crypto loans on DaatFI. No other contract or wallet can withdraw funds without owner authorization.</span>
     </div>
 
     <!-- Stats Bar -->
     <div class="pool-stats-grid">
       <div class="pool-stat-card">
-        <div class="pool-stat-label"><i class="fa-solid fa-water"></i> Liquidez Total</div>
+        <div class="pool-stat-label"><i class="fa-solid fa-water"></i> Total Liquidity</div>
         <div class="pool-stat-value" id="pool-total-liquidity">—</div>
-        <div class="pool-stat-sub">USDC no pool</div>
+        <div class="pool-stat-sub">USDC in pool</div>
       </div>
       <div class="pool-stat-card">
-        <div class="pool-stat-label"><i class="fa-solid fa-wallet"></i> Seu Saldo</div>
+        <div class="pool-stat-label"><i class="fa-solid fa-wallet"></i> Your Balance</div>
         <div class="pool-stat-value" id="pool-user-balance">—</div>
-        <div class="pool-stat-sub">USDC (inclui rendimento)</div>
+        <div class="pool-stat-sub">USDC (includes yield)</div>
       </div>
       <div class="pool-stat-card">
-        <div class="pool-stat-label"><i class="fa-solid fa-chart-line"></i> APY Estimado</div>
+        <div class="pool-stat-label"><i class="fa-solid fa-chart-line"></i> Estimated APY</div>
         <div class="pool-stat-value" id="pool-apy">5%</div>
-        <div class="pool-stat-sub">baseado em juros recebidos</div>
+        <div class="pool-stat-sub">based on interest received</div>
       </div>
       <div class="pool-stat-card">
-        <div class="pool-stat-label"><i class="fa-solid fa-coins"></i> Suas Shares</div>
+        <div class="pool-stat-label"><i class="fa-solid fa-coins"></i> Your Shares</div>
         <div class="pool-stat-value" id="pool-user-shares">—</div>
-        <div class="pool-stat-sub">% de propriedade do pool</div>
+        <div class="pool-stat-sub">% pool ownership</div>
       </div>
     </div>
 
@@ -1961,70 +1961,70 @@ app.get('/', (c) => {
 
       <!-- Deposit -->
       <div class="pool-action-card">
-        <div class="pool-action-title"><i class="fa-solid fa-arrow-right-to-bracket text-green"></i> Depositar USDC</div>
-        <div class="pool-action-desc">Deposite USDC para fornecer liquidez e receber shares proporcionais. Seu rendimento cresce automaticamente à medida que juros de empréstimos entram no pool.</div>
+        <div class="pool-action-title"><i class="fa-solid fa-arrow-right-to-bracket text-green"></i> Deposit USDC</div>
+        <div class="pool-action-desc">Deposit USDC to provide liquidity and receive proportional shares. Your yield grows automatically as loan interest flows into the pool.</div>
         <div class="form-group" style="margin-top:16px;">
-          <label class="form-label">Valor (USDC)</label>
-          <input id="pool-deposit-amount" type="number" class="form-control" placeholder="Ex: 100" min="1" step="0.000001" oninput="poolUpdateDepositPreview()" />
+          <label class="form-label">Amount (USDC)</label>
+          <input id="pool-deposit-amount" type="number" class="form-control" placeholder="e.g. 100" min="1" step="0.000001" oninput="poolUpdateDepositPreview()" />
         </div>
         <div class="pool-preview" id="pool-deposit-preview" style="display:none;">
-          <div class="pool-preview-row"><span>Você receberá ≈</span><span id="pool-deposit-shares-est">—</span> shares</div>
-          <div class="pool-preview-row"><span>Liquidez total após depósito:</span><span id="pool-deposit-new-total">—</span> USDC</div>
+          <div class="pool-preview-row"><span>You will receive ≈</span><span id="pool-deposit-shares-est">—</span> shares</div>
+          <div class="pool-preview-row"><span>Total liquidity after deposit:</span><span id="pool-deposit-new-total">—</span> USDC</div>
         </div>
         <button class="btn-pool-action btn-deposit" onclick="poolDeposit()">
-          <i class="fa-solid fa-lock"></i> Aprovar & Depositar
+          <i class="fa-solid fa-lock"></i> Approve & Deposit
         </button>
       </div>
 
       <!-- Withdraw -->
       <div class="pool-action-card">
-        <div class="pool-action-title"><i class="fa-solid fa-arrow-right-from-bracket text-amber"></i> Sacar USDC</div>
-        <div class="pool-action-desc">Queime shares para resgatar USDC proporcional + rendimento acumulado. O valor de cada share cresce com os juros pagos pelos tomadores.</div>
+        <div class="pool-action-title"><i class="fa-solid fa-arrow-right-from-bracket text-amber"></i> Withdraw USDC</div>
+        <div class="pool-action-desc">Burn shares to redeem proportional USDC + accrued yield. Each share's value increases with interest paid by borrowers.</div>
         <div class="form-group" style="margin-top:16px;">
-          <label class="form-label">Shares a queimar</label>
-          <input id="pool-withdraw-shares" type="number" class="form-control" placeholder="Ex: 50" min="0.000001" step="0.000001" oninput="poolUpdateWithdrawPreview()" />
+          <label class="form-label">Shares to burn</label>
+          <input id="pool-withdraw-shares" type="number" class="form-control" placeholder="e.g. 50" min="0.000001" step="0.000001" oninput="poolUpdateWithdrawPreview()" />
           <div style="margin-top:6px;">
-            <button class="btn-link-sm" onclick="poolSetMaxShares()">Usar máximo (<span id="pool-max-shares-label">—</span> shares)</button>
+            <button class="btn-link-sm" onclick="poolSetMaxShares()">Use max (<span id="pool-max-shares-label">—</span> shares)</button>
           </div>
         </div>
         <div class="pool-preview" id="pool-withdraw-preview" style="display:none;">
-          <div class="pool-preview-row"><span>Você receberá ≈</span><span id="pool-withdraw-usdc-est">—</span> USDC</div>
-          <div class="pool-preview-row"><span>Suas shares restantes:</span><span id="pool-withdraw-shares-left">—</span></div>
+          <div class="pool-preview-row"><span>You will receive ≈</span><span id="pool-withdraw-usdc-est">—</span> USDC</div>
+          <div class="pool-preview-row"><span>Remaining shares:</span><span id="pool-withdraw-shares-left">—</span></div>
         </div>
         <button class="btn-pool-action btn-withdraw" onclick="poolWithdraw()">
-          <i class="fa-solid fa-unlock"></i> Sacar USDC
+          <i class="fa-solid fa-unlock"></i> Withdraw USDC
         </button>
       </div>
     </div>
 
     <!-- Simulate Pool Funding (Testnet Mode) -->
     <div class="pool-simulate-banner">
-      <div class="pool-simulate-title"><i class="fa-solid fa-flask text-cyan"></i> Modo Testnet — Simular Financiamento do Pool</div>
-      <div class="pool-simulate-desc">Se o pool não tiver liquidez suficiente, empréstimos ficam com status "Requested". Use o botão abaixo para simular um aporte e testar o fluxo completo.</div>
+      <div class="pool-simulate-title"><i class="fa-solid fa-flask text-cyan"></i> Testnet Mode — Simulate Pool Funding</div>
+      <div class="pool-simulate-desc">If the pool has insufficient liquidity, loans remain in "Requested" status. Use the button below to simulate a deposit and test the full flow.</div>
       <button class="btn-pool-action btn-simulate" onclick="poolSimulateFunding()">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> Simular Aporte no Pool (100 USDC)
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Simulate Pool Deposit (100 USDC)
       </button>
     </div>
 
     <!-- How it Works -->
     <div class="pool-how-section">
-      <div class="pool-how-title"><i class="fa-solid fa-circle-question"></i> Como funciona?</div>
+      <div class="pool-how-title"><i class="fa-solid fa-circle-question"></i> How does it work?</div>
       <div class="pool-how-grid">
         <div class="pool-how-step">
           <div class="pool-how-num">1</div>
-          <div class="pool-how-text"><strong>Deposite USDC</strong> — receba shares proporcional ao pool total.</div>
+          <div class="pool-how-text"><strong>Deposit USDC</strong> — receive shares proportional to the total pool.</div>
         </div>
         <div class="pool-how-step">
           <div class="pool-how-num">2</div>
-          <div class="pool-how-text"><strong>Empréstimos são financiados automaticamente</strong> — quando um tomador solicita um empréstimo, o pool verifica liquidez e transfere USDC.</div>
+          <div class="pool-how-text"><strong>Loans are auto-funded</strong> — when a borrower requests a loan, the pool checks liquidity and transfers USDC.</div>
         </div>
         <div class="pool-how-step">
           <div class="pool-how-num">3</div>
-          <div class="pool-how-text"><strong>Juros retornam ao pool</strong> — ao repagar, o tomador devolve principal + juros, inflacionando o valor de cada share.</div>
+          <div class="pool-how-text"><strong>Interest returns to the pool</strong> — on repayment, the borrower returns principal + interest, inflating each share's value.</div>
         </div>
         <div class="pool-how-step">
           <div class="pool-how-num">4</div>
-          <div class="pool-how-text"><strong>Saque a qualquer momento</strong> — queime suas shares para receber USDC + rendimento acumulado.</div>
+          <div class="pool-how-text"><strong>Withdraw anytime</strong> — burn your shares to receive USDC + accrued yield.</div>
         </div>
       </div>
     </div>
@@ -2032,11 +2032,11 @@ app.get('/', (c) => {
     <!-- Active Pool Loans -->
     <div class="pool-loans-section">
       <div class="pool-loans-header">
-        <span><i class="fa-solid fa-list-check"></i> Empréstimos Financiados pelo Pool</span>
-        <button class="btn-refresh-sm" onclick="poolLoadActiveLoans()"><i class="fa-solid fa-rotate-right"></i> Atualizar</button>
+        <span><i class="fa-solid fa-list-check"></i> Loans Funded by Pool</span>
+        <button class="btn-refresh-sm" onclick="poolLoadActiveLoans()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
       </div>
       <div id="pool-loans-list">
-        <div class="pool-empty-state"><i class="fa-solid fa-droplet-slash"></i><br>Conecte sua carteira para ver os empréstimos financiados pelo pool.</div>
+        <div class="pool-empty-state"><i class="fa-solid fa-droplet-slash"></i><br>Connect your wallet to view pool-funded loans.</div>
       </div>
     </div>
 
@@ -2333,17 +2333,17 @@ app.get('/', (c) => {
 
 <!-- ════ SCRIPTS ════ -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="/static/contractABI.js?v=20260415f"></script>
-<script src="/static/web3Manager.js?v=20260415f"></script>
-<script src="/static/ui.js?v=20260415f"></script>
-<script src="/static/chatbot.js?v=20260415f"></script>
-<script src="/static/marketplace.js?v=20260415f"></script>
-<script src="/static/receipt.js?v=20260415f"></script>
-<script src="/static/docs-viewer.js?v=20260415f"></script>
-<script src="/static/security.js?v=20260415f"></script>
-<script src="/static/nftLoans.js?v=20260415f"></script>
-<script src="/static/liquidityPool.js?v=20260415f"></script>
-<script src="/static/app.js?v=20260415f"></script>
+<script src="/static/contractABI.js?v=20260415g"></script>
+<script src="/static/web3Manager.js?v=20260415g"></script>
+<script src="/static/ui.js?v=20260415g"></script>
+<script src="/static/chatbot.js?v=20260415g"></script>
+<script src="/static/marketplace.js?v=20260415g"></script>
+<script src="/static/receipt.js?v=20260415g"></script>
+<script src="/static/docs-viewer.js?v=20260415g"></script>
+<script src="/static/security.js?v=20260415g"></script>
+<script src="/static/nftLoans.js?v=20260415g"></script>
+<script src="/static/liquidityPool.js?v=20260415g"></script>
+<script src="/static/app.js?v=20260415g"></script>
 </body>
 </html>`)
 })
