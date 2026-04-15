@@ -61,7 +61,8 @@ function showPage(pageId) {
   if (pageId === 'settings')    loadSettingsValues();
   if (pageId === 'borrow')      { if (uploadedDocs.length === 0) { uploadedDocs = []; _renderDocSlots(); } }
   // about page requires no lazy-load
-  if (pageId === 'nft-loans')  { if (window.nftLoansInit) nftLoansInit(); }
+  if (pageId === 'nft-loans')      { if (window.nftLoansInit)  nftLoansInit(); }
+  if (pageId === 'liquidity-pool') { if (window.poolInit)       poolInit(); }
 }
 
 // ══════════════════════════════════════════════════════════════

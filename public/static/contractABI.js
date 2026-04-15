@@ -406,3 +406,40 @@ const DAATFI_NFT_ABI = [
 
 window.DAATFI_NFT_ADDRESS = DAATFI_NFT_ADDRESS;
 window.DAATFI_NFT_ABI     = DAATFI_NFT_ABI;
+
+// ── DaatFI Liquidity Pool ──────────────────────────────────────────────────────
+// DEPLOYED on Arc Testnet — address set after deploy
+// Replace LIQUIDITY_POOL_ADDRESS_HERE with the actual deployed address
+const LIQUIDITY_POOL_ADDRESS = "LIQUIDITY_POOL_ADDRESS_HERE";
+
+const LIQUIDITY_POOL_ABI = [
+  {"inputs":[{"internalType":"address","name":"_usdc","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"contractAddr","type":"address"},{"indexed":false,"internalType":"bool","name":"status","type":"bool"}],"name":"AuthorizedContractSet","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"usdcAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"sharesIssued","type":"uint256"}],"name":"Deposit","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"loanId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"loanType","type":"uint8"},{"indexed":false,"internalType":"uint256","name":"loss","type":"uint256"}],"name":"LoanDefaulted","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"loanId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"loanType","type":"uint8"},{"indexed":true,"internalType":"address","name":"borrower","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"LoanFunded","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"loanId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"loanType","type":"uint8"},{"indexed":false,"internalType":"uint256","name":"repayment","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"interest","type":"uint256"}],"name":"LoanRepaid","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"usdcAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"sharesBurned","type":"uint256"}],"name":"Withdraw","type":"event"},
+  {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"authorizedContracts","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"deposit","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"},{"internalType":"uint8","name":"loanType","type":"uint8"},{"internalType":"address","name":"borrower","type":"address"},{"internalType":"uint256","name":"principal","type":"uint256"},{"internalType":"uint256","name":"repaymentAmount","type":"uint256"},{"internalType":"uint256","name":"durationDays","type":"uint256"}],"name":"fundLoan","outputs":[{"internalType":"bool","name":"funded","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"},{"internalType":"uint8","name":"loanType","type":"uint8"}],"name":"getPoolLoan","outputs":[{"components":[{"internalType":"uint256","name":"loanId","type":"uint256"},{"internalType":"address","name":"borrower","type":"address"},{"internalType":"uint256","name":"principal","type":"uint256"},{"internalType":"uint256","name":"repaymentAmount","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"durationDays","type":"uint256"},{"internalType":"uint8","name":"loanType","type":"uint8"},{"internalType":"uint8","name":"status","type":"uint8"},{"internalType":"bool","name":"fundedByPool","type":"bool"}],"internalType":"struct DaatFILiquidityPool.PoolLoan","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"getEstimatedAPYBps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"pure","type":"function"},
+  {"inputs":[],"name":"getTotalLiquidity","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserBalance","outputs":[{"internalType":"uint256","name":"usdcValue","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserShares","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"},{"internalType":"uint8","name":"loanType","type":"uint8"}],"name":"isLoanFundedByPool","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"},{"internalType":"uint8","name":"loanType","type":"uint8"}],"name":"recordDefault","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"loanId","type":"uint256"},{"internalType":"uint8","name":"loanType","type":"uint8"},{"internalType":"address","name":"borrower","type":"address"},{"internalType":"uint256","name":"repaymentAmount","type":"uint256"}],"name":"repayToPool","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"contractAddr","type":"address"},{"internalType":"bool","name":"status","type":"bool"}],"name":"setAuthorizedContract","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"shares","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"totalLiquidity","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"totalShares","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[],"name":"usdc","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"shareAmount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}
+];
+
+window.LIQUIDITY_POOL_ADDRESS = LIQUIDITY_POOL_ADDRESS !== "LIQUIDITY_POOL_ADDRESS_HERE" ? LIQUIDITY_POOL_ADDRESS : null;
+window.LIQUIDITY_POOL_ABI     = LIQUIDITY_POOL_ABI;
